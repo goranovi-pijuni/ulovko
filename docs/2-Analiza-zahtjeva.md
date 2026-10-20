@@ -1,212 +1,108 @@
 # 2. Analiza zahtjeva
 
-**Cilj:** Iz odobrenog opsega projekta izvesti prepoznatljive, prioritetizirane i provjerljive zahtjeve. Zahtjevi se mogu mijenjati; pri završnoj predaji moraju odražavati dogovorenu aplikaciju. Izvori, odluke i poveznice u primjerima kolegija nastavni su scenariji, a ne projektni zapisi.
-
-<details>
-<summary><strong>Održavanje zahtjeva ažurnima</strong></summary>
-
-Primjeri koriste temu projekta CrisisMap. Neki namjerno sadrže korisne nedostatke za raspravu. Izvori, odluke i poveznice na provjere u tim primjerima **nastavni su scenariji**, a ne zapisi rada stvarnog studentskog tima. Zamijenite ih zahtjevima i dokazima svojeg odobrenog projekta. Značajne promjene zabilježite u odjeljku 2.5.
-
-</details>
+Prioritet **Visok** znači da zahtjev pripada osnovnoj planiranoj funkcionalnosti ili ključnom tehničkom cilju. **Srednji** znači da se zahtjev može razvijati nakon osnovnog korisničkog tijeka ili mu se opseg može prilagoditi prema dostupnom vremenu.
 
 ## 2.1 Funkcijski zahtjevi
 
-**Cilj:** Navesti što aplikacija mora omogućiti korisnicima, odakle pojedina mogućnost proizlazi i koji se opažljivi rezultat smatra prihvaćanjem.
-
 | ID | Opis | Prioritet | Izvor | Kriteriji prihvaćanja |
 | --- | --- | --- | --- | --- |
-| F-001 | [Funkcijski zahtjev/ponašanje sustava] | [Visok/Srednji/Nizak] | [Odobreni zadatak / zahtjev dionika / povratna informacija] | [Opažljivi rezultat] |
-|  |  |  |  |  |
-
-<details>
-<summary><strong>Izvori zahtjeva i kriteriji prihvaćanja</strong></summary>
-
-Svaki zahtjev treba imati stabilan ID. **Izvor označava odakle zahtjev potječe**, primjerice iz odobrenog projektnog zadatka, zahtjeva dionika ili povratne informacije koja je promijenila zahtjev. Opišite opažljivo ponašanje umjesto naziva zaslona ili programskog okvira. U cijeloj dokumentaciji koristite istu ljestvicu prioriteta. Složenu korisničku interakciju objasnite u odgovarajućem obrascu uporabe umjesto kopiranja cijelog tijeka u ovu tablicu.
-
-**Primjer — funkcijski zahtjevi za aplikaciju CrisisMap:**
-
-Kategorije izvora pokazuju različite načine na koje zahtjev može nastati.
-
-| ID | Opis | Prioritet | Izvor | Kriteriji prihvaćanja |
-| --- | --- | --- | --- | --- |
-| F-001 | Sustav omogućuje korisniku registraciju računa pomoću adrese e-pošte. | Visok | Zahtjev dionika | Korisnik se može registrirati adresom e-pošte, primiti poruku za potvrdu i aktivirati račun slijedeći poveznicu. |
-| F-002 | Sustav omogućuje oporavak lozinke putem e-pošte. | Srednji | Zahtjev dionika | Korisnik može zatražiti ponovno postavljanje lozinke, primiti poveznicu i uspješno postaviti novu lozinku. |
-| F-003 | Sustav prikazuje popis dostupnih resursa povezanih s kriznim događajima. | Visok | Postojeći sustav | Korisnik može pregledati ažurirani popis resursa relevantnih za vrstu kriznog događaja, lokaciju i raspoloživost. |
-| F-004 | Sustav omogućuje korisnicima podnošenje prijave kriznog događaja s lokacijom. | Visok | Dokument sa zahtjevima | Korisnik može podnijeti prijavu s vrstom kriznog događaja, razinom ozbiljnosti i lokacijom te dobiti potvrdu o zaprimanju. Ako odbije pristup geolokaciji preglednika, može lokaciju odabrati ručno.|
-| F-005 | Sustav šalje korisnicima obavijesti o relevantnim promjenama u njihovoj blizini. | Visok | Povratna informacija korisnika | Korisnici dobivaju obavijest unutar jedne minute od relevantne promjene za njihovu lokaciju. |
-| F-006 | Sustav prikazuje dostupne resurse prema lokaciji. | Visok | Analiza dokumentacije | Prikazuje se ažurirani popis resursa prilagođen vrsti kriznog događaja, lokaciji i raspoloživosti. |
-| F-007 | Sustav prikazuje prijave kriznih događaja s lokacijom kao oznake na karti. | Visok | Odobreni zadatak | Prijava s valjanom lokacijom prikazuje se kao oznaka na karti; odabirom oznake korisnik može otvoriti pripadajuću prijavu. |
-| F-008 | Sustav omogućuje moderatoru odobravanje ili odbijanje podnesenih prijava. | Visok | Zahtjev dionika | Moderator može odobriti ili odbiti prijavu koja čeka pregled; korisnik bez moderatorskih ovlasti ne može izvršiti te radnje. |
-
-**Kriteriji prihvaćanja i podrijetlo zahtjeva:** Primjer prikazuje registraciju, oporavak lozinke, resurse, prijavu kriznog događaja i obavijesti te nekoliko vrsta izvora i opažljivih kriterija. Istodobno otvara korisna pitanja: opisuju li F-003 i F-006 istu funkcionalnost resursa? Je li obećanje od jedne minute u F-005 dogovoreno i moguće ispitati? Treba li aplikaciji koja koristi isključivo OAuth uopće F-001 i F-002? Retke koristite kao materijal za analizu; u svojem projektu navedite vlastite zahtjeve. U stvarnom projektu stupac Izvor bilježi odakle su doista potekli njegovi zahtjevi.
-
-**Primjer prilagodbe kada odobreni zadatak koristi OAuth i kartu:** Umjesto kopiranja registracije e-poštom i oporavka lozinke formulirajte relevantni zahtjev za prijavu, primjerice: „F-001: Korisnici se prijavljuju putem odobrenog OAuth pružatelja identiteta; uspješna prijava omogućuje radnje rezervirane za prijavljene korisnike, a odustajanje od prijave ostavlja te radnje nedostupnima.” Zaseban zahtjev za kartu može glasiti: „F-007 : Prijave s lokacijom prikazuju se kao oznake na karti; odabirom oznake otvara se pripadajuća prijava.” Izvor treba biti stvarni odobreni zadatak ili dogovoreni zahtjev dionika. Ova je prilagodba zamjena za neodgovarajuće retke, a ne dodatna tablica koju svaki tim mora ispuniti.
-
-Za složenu interakciju kratak scenarij *Given / When / Then* može pojasniti kriterij. Primjerice: *Given* prijava bez lokacije, *when* građanin je podnese, *then* sustav objašnjava da lokacija nedostaje i ne pohranjuje prijavu. Nemojte jednostavan kriterij ponavljati i u prozi i u Gherkinu niti pisati Gherkin za svaki zahtjev.
-
-</details>
-
+| F-001 | Korisnik se može prijaviti putem vanjskog pružatelja identiteta koristeći OpenID Connect / OAuth 2.0. | Visok | Zahtjev kolegija | Uspješna prijava otvara korisničku sesiju, odustajanje ili neuspjela prijava ne dopušta pristup zaštićenim radnjama. |
+| F-002 | Korisnik može zatražiti organizatorske ovlasti, a administrator može zahtjev odobriti ili odbiti. | Visok | Projektni prijedlog | Samo odobreni korisnik može otvoriti sučelje za stvaranje natjecanja i učitavanje zadataka. |
+| F-003 | Posjetitelj može pregledati javno dostupna, nadolazeća i završena natjecanja. | Visok | Projektni prijedlog | Pregled prikazuje naziv, opis i relevantna vremena za javna natjecanja, privatni organizacijski podaci nisu vidljivi. |
+| F-004 | Organizator može stvoriti i uređivati vlastita natjecanja, uključujući raspored, pravila i postavke. | Visok | Projektni prijedlog | Natjecanje se pohranjuje s valjanim postavkama, drugi organizator bez ovlasti ne može ga mijenjati. |
+| F-005 | Korisnik može osnovati tim za natjecanje te omogućiti pristup pozivnicom ili kodom. | Visok | Projektni prijedlog | Pozvani korisnik može pristupiti timu, drugi pristup istom natjecanju odbija se ako već pripada jednom timu. |
+| F-006 | Korisnik može sudjelovati u više natjecanja istodobno, sa zasebnim članstvima. | Visok | Projektni prijedlog | Članstvo u timu natjecanja A ne mijenja članstvo i mogućnosti pristupa u natjecanju B. |
+| F-007 | Organizator može definirati zadatak s naslovom, opisom, kategorijom, zastavicom i postavkama bodovanja. | Visok | Projektni prijedlog | Valjan zadatak pohranjuje se uz određeno natjecanje, očekivana zastavica nije dostupna natjecateljskom API-ju. |
+| F-008 | Sustav prima ZIP arhivu zadatka te obrađuje `config.yaml`, `public/` i `deploy/`. | Visok | Projektni prijedlog | Valjana arhiva se prihvaća, nevaljana struktura dobiva razumljivu pogrešku, izvori iz `deploy/` nisu dostupni natjecateljima. |
+| F-009 | Sustav natjecateljima omogućuje preuzimanje javnih datoteka objavljenog zadatka. | Visok | Projektni prijedlog | Korisnik može preuzeti sadržaj `public/`, ali ne i privatne datoteke izvođenja ili još neobjavljene priloge. |
+| F-010 | Organizator može odrediti vrijeme objave zadatka. | Visok | Projektni prijedlog | Zadatak prije vremena objave nije dostupan natjecateljima, a nakon objave postaje vidljiv bez ručne intervencije. |
+| F-011 | Tim može predati zastavicu i dobiti rezultat provjere. | Visok | Projektni prijedlog | Točna zastavica evidentira rješenje, pogrešna ga ne evidentira, ponovljena točna predaja istog tima ne dodjeljuje dodatne bodove. |
+| F-012 | Organizator može koristiti statičko bodovanje zadataka. | Visok | Projektni prijedlog | Nakon prvog uspješnog rješenja timu se pribraja zadani broj bodova. |
+| F-013 | Organizator može koristiti dinamičko bodovanje s parametrima za pojedini zadatak. | Visok | Projektni prijedlog | Vrijednost zadatka mijenja se prema broju rješenja i zadanoj funkciji, rezultati svih timova računaju se dosljedno prema aktualnim vrijednostima. |
+| F-014 | Sustav prikazuje ljestvicu rezultata natjecanja. | Visok | Projektni prijedlog | Nakon evidentiranja rješenja prikaz sadrži ažurne ukupne bodove i silazni poredak timova. |
+| F-015 | Korisnik može pregledati svoju povijest natjecanja i rješenja, a organizator osnovnu statistiku natjecanja. | Srednji | Projektni prijedlog | Prikazuju se pripadajuća natjecanja, timovi, osvojeni bodovi i evidentirana rješenja, korisnik ne može pristupiti tuđim privatnim podacima. |
+| F-016 | Sustav šalje dogovorene obavijesti putem Discord web-dojavnika. | Visok | Zahtjev kolegija (vanjska integracija) i projektni prijedlog | Događaj poput objave zadatka šalje poruku konfiguriranom kanalu, pogreška pri dostavi ne prekida bodovanje ili rad natjecanja. |
+| F-017 | Challenge Runner može izraditi kontejnerske slike iz Dockerfileova navedenih u konfiguraciji zadatka. | Visok | Projektni prijedlog | Za paket s dva valjana servisa izgradnja izrađuje dvije dostupne slike ili vraća jasnu informaciju o neuspjehu. |
+| F-018 | Challenge Runner pokreće jednu zajedničku instancu servisa zadatka za natjecanje pri njegovoj objavi. | Visok | Projektni prijedlog | Pri objavi zadatka pokreću se traženi servisi, a ponovljeni zahtjev ne stvara drugu istovjetnu instancu. |
+| F-019 | Challenge Runner javno izlaže HTTP servis putem dodijeljene HTTPS adrese. | Visok | Projektni prijedlog | Servis s deklariranim HTTP portom dostupan je preko dodijeljene poddomene i ispravnog TLS certifikata. |
+| F-020 | Challenge Runner javno izlaže TCP servis na automatski dodijeljenom portu. | Visok | Projektni prijedlog | Dva istodobna TCP servisa dobivaju upotrebljive i međusobno nekonfliktne javne portove. |
+| F-021 | Servisi istog zadatka mogu međusobno komunicirati preko privatnih mrežnih imena. | Srednji | Projektni prijedlog | Primjer s dva servisa uspješno uspostavlja internu vezu bez korištenja javnih krajnjih točaka. |
+| F-022 | Administrator vidi stanje pokrenutih izazova i može zatražiti ponovno pokretanje. | Visok | Projektni prijedlog | Prikaz pokazuje identitet zadatka, stanje, krajnje točke i pogreške, ovlašteni zahtjev za restart obrađuje se i bilježi. |
+| F-023 | Runner zaustavlja i uklanja resurse izazova po završetku natjecanja. | Visok | Projektni prijedlog | Nakon završetka ne ostaju aktivni servisi tog natjecanja, a oslobođeni mrežni portovi mogu se ponovno koristiti. |
+| F-024 | Natjecanja sa statičkim zadacima rade i ako Challenge Runner nije dostupan. | Visok | Odluka o granicama projekta | U simulaciji nedostupnog Runnera i dalje rade prijava, prikaz zadataka, predaja zastavica i bodovanje statičkih zadataka. |
 
 ## 2.2 Nefunkcijski zahtjevi
 
-**Cilj:** Odrediti važna svojstva kvalitete i uvjete rada odobrene aplikacije na način koji tim može razumno provjeriti.
-
 | ID | Opis | Prioritet | Izvor | Način provjere |
 | --- | --- | --- | --- | --- |
-| NF-01 | [Konkretan zahtjev (npr. odziv, sigurnost, pristupačnost)] | Visok / Srednji / Nizak | [Sigurnost / Uputa / SLA] | [Mjerenje / Testni scenarij / Pregled] |
-|  |  |  |  |  |
-
-<details>
-<summary><strong>Nefunkcijski zahtjevi za analizu</strong></summary>
-
-Relevantna svojstva mogu se odnositi na uporabljivost, pristupačnost, sigurnost, performanse ili pouzdanost. Odaberite svojstva specifična za projekt i opišite kako ih je moguće provjeriti. Zahtjev navodi što se očekuje; stvarna opažanja i dokazi pripadaju rezultatima ispitivanja, a ne drugom stupcu s rezultatima u ovoj tablici.
-
-**Primjer — nefunkcijski zahtjevi za aplikaciju CrisisMap:**
-
-| ID | Opis | Prioritet | Izvor |
-| --- | --- | --- | --- |
-| NF-1.1 | Sustav mora podržati 1.000 istodobnih korisnika uz vrijeme odziva kraće od 1 s. | Visok | SLA | Opteretiti sustav zadanim brojem istodobnih korisnika i izmjeriti vrijeme odziva. |
-| NF-1.2 | Svi osjetljivi podaci moraju biti šifrirani algoritmom AES-256. | Visok | Sigurnosna politika | Pregledati način pohrane i konfiguraciju šifriranja za podatke na koje se zahtjev odnosi. |
-| NF-1.3 | Korisničko sučelje mora podržavati engleski i španjolski jezik. | Srednji | Povratna informacija dionika | Pregledati reprezentativne korisničke tijekove u oba jezika. |
-| NF-1.4 | Dostupnost sustava mora iznositi najmanje 99,5 % mjesečno. | Visok | SLA | Izračunati mjesečnu dostupnost iz zapisa sustava za nadzor, ako takvi podaci postoje.|
-| NF-3.1.7 | Sustav treba imati odgovarajuću dokumentaciju. | Visok | Pravila dokumentiranja | Pregledati zahtijevane dokumentaciju prema obavezama.|
-| NF-3.1.7.1 | Kod sustava treba biti dokumentiran prema „Code Conventions for the Java Programming Language”. | Visok | Pravila dokumentiranja | Pregledati kod. |
-| NF-3.1.7.2 | Sustav treba biti opisan projektnim dokumentom/SRS-om. | Visok | Pravila dokumentiranja | Pregledati strukturu dokumenta  |
-| NF-3.1.7.3 | Sustav treba imati „Operativni priručnik” koji opisuje pravilnu uporabu. | Visok | Pravila dokumentiranja | Pregledati postoji li priručnik i mogu li se prema njemu izvršiti opisane radnje. |
-| NF-3.1.7.4 | Sustav treba imati „Plan implementacije” za pravilno postavljanje. | Visok | Smjernice za postavljanje | Pregledati odgovara li opisani postupak stvarnom postupku postavljanja.|
-
-**Provjerljivost i opseg:** Primjer uvodi performanse, sigurnost, lokalizaciju, dostupnost i dokumentaciju, uključujući hijerarhijski ID zahtjeva. Navedeni izvori primjeri su podrijetla zahtjeva, a ne dokaz da za studentski projekt stvarno postoji SLA ili sigurnosna politika. Vrijednosti poput 1.000 korisnika, 99,5 % mjesečne dostupnosti i AES-256 moraju imati odobren izvor i izvediv način provjere prije nego što postanu zahtjevi tima. Skup zahtjeva o dokumentaciji ilustrira razlaganje zahtjeva, ali zahtjevi za izradu *ove dokumentacije kolegija* u pravilu pripadaju uputama zadatka, a ne zahtjevima kvalitete web-aplikacije.
-
-**Primjer prilagodbe:** Ako je pristupačnost zahtjevana za  projekt, projektno specifičan zahtjev može glasiti: „NF-01: Sve obavezne radnje u obrascu za podnošenje prijave moguće je izvršiti samo tipkovnicom, uz vidljiv fokus na aktivnoj kontroli.” Provjera: navigirati kroz obrazac bez pokazivačkog uređaja, odabrati ili unijeti lokaciju, poslati prijavu i provjeriti može li se pročitati rezultat. To je provjerljivo svojstvo kvalitete, a ne dodatna funkcionalnost koju svaki projekt mora implementirati.
-
-</details>
+| NF-01 | Zaštićene radnje moraju provjeravati ovlasti na poslužitelju, uključujući vlasništvo nad natjecanjem. | Visok | Sigurnost i projektni prijedlog | Pokušati uređivati tuđe natjecanje, učitati zadatak bez organizatorske uloge i pristupiti administratorskoj radnji. Svi pokušaji moraju biti odbijeni. |
+| NF-02 | Učitana arhiva ne smije omogućiti čitanje ili pisanje izvan predviđenog prostora niti izlaganje privatnih datoteka zadatka. | Visok | Sigurnost | Testirati nevaljane putanje, simboličke poveznice, nedopuštenu strukturu i nedopušten pristup sadržaju `deploy/`. |
+| NF-03 | Kontejneri zadataka izvode se uz ograničene ovlasti i resurse, a mrežni pristup drugim izazovima i internim komponentama platforme treba biti ograničen. | Visok | Sigurnost | Pregledati konfiguraciju sigurnosnih konteksta, resursnih ograničenja i mrežnih pravila, provesti pokušaje nedopuštenog pristupa iz testnog izazova. |
+| NF-04 | Kvar ili nedostupnost Challenge Runnera ne smije onemogućiti osnovne funkcije natjecanja sa statičkim zadacima. | Visok | Pouzdanost | Zaustaviti mock/realni Runner i provjeriti da prijava, predaje zastavica i ljestvica i dalje rade. |
+| NF-05 | Ponovljeni zahtjevi za objavu ili gašenje izazova ne smiju proizvesti duplicirane instance ili nepredviđene resurse. | Visok | Pouzdanost | Dvaput pozvati istu operaciju i provjeriti broj instanci, stanje sustava i evidenciju događaja. |
+| NF-06 | Paralelne predaje iste točne zastavice ne smiju uzrokovati višestruku dodjelu bodova. | Visok | Integritet podataka | U testu istodobno poslati više predaja istog tima za isti zadatak i provjeriti jedno evidentirano rješenje. |
+| NF-07 | Javno korisničko sučelje i javni HTTP servisi zadataka trebaju koristiti HTTPS. | Visok | Sigurnost | Pristupiti preko HTTPS-a i provjeriti valjanost certifikata i ispravnost usmjeravanja. |
+| NF-08 | Instalacija i pokretanje aplikacije moraju biti reproducibilni iz repozitorija i dokumentiranih konfiguracijskih primjera bez uključivanja tajnih podataka. | Visok | Zahtjev kolegija i održivost | Drugi član tima slijedi upute nakon čistog kloniranja i pokreće aplikaciju te osnovnu provjeru. |
 
 ## 2.3 Dionici i akteri
 
-**Cilj:** Utvrditi uloge koje utječu na zahtjeve i razlikovati dionike od aktera koji komuniciraju s aplikacijom.
+| ID | Uloga / akter | Odnos prema sustavu | Relevantni zahtjevi |
+| --- | --- | --- | --- |
+| A-01 | Posjetitelj | Pregledava javne informacije bez prijave. | F-003 |
+| A-02 | Natjecatelj | Sudjeluje u natjecanju, radi u timu, rješava zadatke. | F-001, F-005, F-006, F-009, F-011, F-014, F-015 |
+| A-03 | Organizator | Priprema natjecanja i zadatke, prati njihove rezultate. | F-004, F-007, F-008, F-010, F-012, F-013, F-015 |
+| A-04 | Administrator platforme | Odobrava ovlasti i upravlja nadzorom sustava. | F-002, F-022 |
+| A-05 | Vanjski pružatelj identiteta | Sudjeluje u autentikacijskom postupku. | F-001 |
+| A-06 | Discord usluga | Prima obavijesti putem web-dojavnika. | F-016 |
 
-| ID uloge ili aktera | Odnos prema sustavu | Relevantni zahtjevi |
-| --- | --- | --- |
-|  |  |  |
-
-<details>
-<summary><strong>Akteri i povezani zahtjevi</strong></summary>
-
-**Primjer — akteri aplikacije CrisisMap:**
-
-| ID aktera | Uloga | Obuhvaćeni funkcijski zahtjevi |
-| --- | --- | --- |
-| A-01 | Koordinator pomoći | F-003: Pregled resursa; F-004: Podnošenje prijave kriznog događaja. |
-| A-02 | Građanin | F-001: Izrada računa; F-005: Primanje obavijesti. |
-| A-03 | Administrator sustava | NF-1.2: Provođenje sigurnosnih pravila; upravljanje korisnicima. |
-| A-04 | Posjetitelj | F-007: Pregled prijava na karti. |
-| A-05 | Moderator | F-008: Odobravanje ili odbijanje prijava. |
-
-**Odgovornosti aktera:** Uloga aktera treba biti povezana s interakcijom, a ne samo s nazivom. Provjerite podnosi li koordinator pomoći u odobrenom zadatku doista prijave kriznih događaja. Poveznica administratora s NF-1.2 navodi sigurnosni aspekt, ali sama po sebi ne opisuje obrazac uporabe; navedite stvarnu radnju administratora ili izostavite ulogu ako je nema. Nastavnici zainteresirani za rezultat mogu biti dionici, a da nisu akteri aplikacije. Tablica je polazište za razmišljanje, a ne potvrđen opis ovlasti u CrisisMapu.
-
-</details>
-
----
+Challenge Runner je **unutarnji podsustav** predložene platforme, a ne dodatna korisnička uloga. Njegova komunikacija s backendom prikazat će se u arhitekturi i dijagramima slijeda.
 
 ## 2.4 Ograničenja i pretpostavke
 
-**Cilj:** Zabilježiti projektno specifične granice i pretpostavke koje utječu na zahtjeve ili oblikovanje, zajedno s njihovim izvorom i praktičnom posljedicom. Ovo je njihovo mjerodavno mjesto u dokumentaciji.
-
-| ID | Tip | Opis ograničenja ili pretpostavke | Izvor | Inženjerska posljedica / Provjera |
+| ID | Tip | Opis | Izvor | Inženjerska posljedica / provjera |
 | --- | --- | --- | --- | --- |
-| C-01 | Ograničenje | [Fiksni tehnički ili procesni uvjet] | [Zadatak / Pravila] | [Utjecaj na arhitekturu i oblikovanje] |
-| AS-01 | Pretpostavka | [Očekivani uvjet, npr. o podacima ili okolini] | [Procjena tima] | [Kako i kada će se provjeriti valjanost] |
-|  |  |  |  |  |
-<details>
-<summary><strong>Ograničenja nasuprot pretpostavkama</strong></summary>
-
-Ograničenje je uvjet koji tim mora poštovati; pretpostavka je uvjet na koji se tim oslanja i koji treba ponovno provjeravati.
-
-**Primjer — projektni kontekst CrisisMapa:**
-
-| ID | Ograničenje ili pretpostavka | Izvor | Posljedica ili način provjere |
-| --- | --- | --- | --- |
-| C-01 | Odobreni zadatak zahtijeva OAuth prijavu u sustav za uređivanje vlastitih prijava korisnika. | Odobreni zadatak  | Zaštićeno uređivanje projektirati oko odabranog pružatelja identiteta; provjeriti autorizirane i neautorizirane zahtjeve. |
-| AS-01 | Prijave koje se prikazuju na karti imaju uporabive koordinate. | Pretpostavka o podacima  | Pregledati ogledne i uvezene prijave; planirati prikaz prijava bez valjanih koordinata. |
-
-**Ograničenje nasuprot pretpostavci:** C-01 navodi obvezujuću odluku i njezin arhitekturni učinak; AS-01 je moguće provjeriti i može se pokazati netočnim. Nemojte kopirati C-01 ako OAuth nije dio stvarnog odobrenog zadatka. Projektni odgovor objasnite u arhitekturi bez prepisivanja ove tablice.
-
-</details>
-
----
+| C-01 | Ograničenje | Prijava putem vanjskog identiteta uz OIDC / OAuth 2.0 obavezan je dio kolegija. | Zahtjev kolegija | Prijavu treba integrirati i testirati s odabranim pružateljem. |
+| C-02 | Ograničenje | Potrebna je domenski relevantna vanjska integracija. | Zahtjev kolegija | Planiran je Discord webhook, uspješnu dostavu treba ispitati. |
+| C-03 | Ograničenje | Projekt mora biti javno dostupan te imati dokumentaciju, modele sustava i testove. | Zahtjev kolegija | Planirati postavljanje i održavati `/docs`, `/docs/deliverables`, GitHub i ispitne scenarije. |
+| C-04 | Ograničenje | Projekt treba uključiti objektno orijentirano oblikovanje i implementaciju. | Zahtjev kolegija | U backendu razdvojiti domenske modele, servise i pristup podacima, odluke dokumentirati. |
+| C-05 | Ograničenje (projektna odluka) | Jedan korisnik pripada najviše jednom timu po natjecanju, istodobno može sudjelovati u više natjecanja. | Projektni prijedlog | Ograničenja provjeravati u poslovnoj logici i bazi podataka. |
+| C-06 | Ograničenje (projektna odluka) | Jedna instanca kontejneriziranog zadatka zajednička je cijelom natjecanju, sa statičkom zastavicom. | Projektni prijedlog | Ne razvijati upravljanje instancama po timu, zadaci moraju biti prikladni za dijeljenje stanja. |
+| AS-01 | Pretpostavka | K3s na jednom čvoru može zadovoljiti potrebe prototipa Runnera. | Tehnička pretpostavka | Rano provjeriti izgradnju i pokretanje HTTP i TCP zadatka. |
+| AS-02 | Pretpostavka | Bit će dostupni DNS, TLS certifikati i javna mrežna konfiguracija za poddomene i TCP portove. | Infrastrukturna pretpostavka | Provjeriti DNS, otvorene portove, HTTPS i ograničenja pružatelja hostinga. |
+| AS-03 | Pretpostavka | Izgradnja Dockerfileova može se sigurno odvojiti od aplikacijskog backenda u okviru studentskog prototipa. | Sigurnosna pretpostavka | Odabrati izdvojeni build proces i provjeriti ovlasti i pristup datotekama. |
+| AS-04 | Pretpostavka | Objektno spremište kompatibilno sa S3 sučeljem odgovara potrebama za pohranu ZIP paketa. | Tehnička pretpostavka | Provjeriti pristup, troškove, ograničenja veličine i zamjenjivost lokalnim razvojnim spremištem. |
 
 ## 2.5 Značajne promjene zahtjeva
 
-**Cilj:** Sačuvati razlog promjena koje mijenjaju dogovoreni opseg, prioritet ili kriterije prihvaćanja, uz istodobno održavanje prethodnih zahtjeva ažurnima.
+Značajne promjene bilježit će se nakon što tim usvoji početni opseg. Trenutačno nema potvrđenih promjena koje bi bilo smisleno prikazati kao donesene odluke.
 
 | Datum | ID zahtjeva | Promjena i razlog | Dogovoreno s / dokaz |
 | --- | --- | --- | --- |
-|  |  |  |  |
-
-<details>
-<summary><strong>Primjer značajne promjene</strong></summary>
-
-**Primjer scenarija — odluka tijekom pregleda CrisisMapa:**
-
-| Datum | ID zahtjeva | Promjena i razlog | Dogovoreno s / dokaz |
-| --- | --- | --- | --- |
-| [Datum pregleda] | F-004, NF-01 | Dodati ručni odabir lokacije kada korisnik odbije geolokaciju preglednika; bez toga građanin ne može podnijeti prijavu kriznog događaja s lokacijom. | [Poveznica na stvarnu bilješku pregleda ili zadatak tima] |
-
-**Razlog promjene:** Zapis navodi zahvaćene stavke i objašnjava razlog iz perspektive korisnika, a zatim upućuje na dokaz odluke.  Nakon stvarne odluke ažurirajte trenutačne zahtjeve; stilska izmjena teksta ne zahtijeva zapis u dnevniku promjena. Trenutačni red zadataka držite u alatu za praćenje zadataka.
-
-</details>
-
----
+| — | — | Još nema evidentiranih promjena nakon usvajanja početnih zahtjeva. | — |
 
 ## 2.6 Sljedivost zahtjeva
 
-**Cilj:** Osigurati dvosmjernu sljedivost — povezati zahtjeve s opisanim ponašanjem, dijelovima sustava koji ih ostvaruju te ispitivanjem ili drugom provjerom. 
+Sljedeća je tablica početna veza zahtjeva s planiranim modulima. Oznake obrazaca uporabe i ispita dodat će se tek nakon što stvarni dokumenti i testovi budu napisani, nije korisno unaprijed izmišljati njihove identifikatore.
 
-| ID zahtjeva | Obrazac uporabe / modul | Arhitekturna realizacija | Ispitivanje ili provjera |
+| ID zahtjeva | Obrazac uporabe / ponašanje | Arhitekturna realizacija (planirana) | Ispitivanje ili provjera |
 | --- | --- | --- | --- |
-| F-001 | [UC-001] | [Komponenta, modul ili drugo mjesto realizacije] | [ST-01, CT-01 ili druga provjera] |
-|  |  |  |  |
-
-<details>
-<summary><strong>Sljedivost zahtjeva do obrazaca uporabe i ispitivanja</strong></summary>
-
-**Primjer — poveznice zahtjeva CrisisMapa:**
-
-| ID zahtjeva | Obrazac uporabe / ponašanje | Arhitekturna realizacija | Ispitivanje / provjera |
-| --- | --- | --- | --- |
-| F-004 | UC-002 Podnošenje prijave kriznog događaja | Web-klijent; API za prijave; usluga za prijave | ST-01 Valjano podnošenje prijave; ST-02 Nedostaje obavezna lokacija; ST-03 Dopuštenje geolokacije odbijeno |
-| F-005 | Odabir primatelja obavijesti | Proces za obavijesti | CT-06 Primatelji obavijesti; potpuna dostava obavijesti nije pokrivena ovom provjerom |
-
-**Pokrivenost i dokazi:** CT-06 provjerava odabir primatelja za F-005, ali sam po sebi ne dokazuje da je obavijest stvarno dostavljena; ako projekt zahtijeva potpunu dostavu od početka do kraja, za taj dio treba postojati zasebna provjera. Svaki redak pokazuje gdje je zahtjev opisan kao ponašanje, gdje je ostvaren u sustavu i gdje se nalazi dokaz njegove provjere. Zahtjev ne mora imati zaseban obrazac uporabe ako ne opisuje korisničku interakciju; tada navedite relevantno ponašanje, arhitekturni element ili drugi prikladan način realizacije. U svojem projektu koristite stvarne nazive komponenata, modula i provjera iz dokumentacije i implementacije. Nedostajuću poveznicu ostavite praznom ili označite kao *na čekanju* uz kratak razlog. Stvarni rezultati ispitivanja bilježe se uz ispitne slučajeve; ova tablica pokazuje gdje ih pronaći.
-
-</details>
-
----
+| F-001 | Prijava korisnika, detaljni UC na čekanju | Backend autentikacija, vanjski IdP | Integracijski test prijave (na čekanju) |
+| F-002 | Zahtjev i odobravanje organizatorskog statusa, UC na čekanju | Backend ovlasti, administracijsko sučelje | Test dopuštenih i zabranjenih radnji (na čekanju) |
+| F-005 | Izrada tima i pridruživanje, UC na čekanju | Backend timovi, baza podataka | Test ograničenja jednog članstva (na čekanju) |
+| F-008 | Učitavanje paketa zadatka, UC na čekanju | Backend zadaci, objektna pohrana, parser | Test valjanih/nevaljanih ZIP arhiva (na čekanju) |
+| F-011, F-012, F-013 | Predaja zastavice i bodovanje, UC na čekanju | Backend scoring, baza podataka | Test bodovanja i istodobnih predaja (na čekanju) |
+| F-016 | Discord obavijesti | Backend događaji, Discord webhook | Integracijski test slanja i pogreške dostave (na čekanju) |
+| F-017, F-018 | Izgradnja i objava zadatka | Runner API, build proces, orkestracija | End-to-end test izgradnje i pokretanja (na čekanju) |
+| F-019, F-020, F-021 | Pristup HTTP/TCP servisima i interna komunikacija | Runner, mrežne usluge, ingress/portovi | Mrežni integracijski test (na čekanju) |
+| F-022, F-023 | Nadzor i zaustavljanje servisa | Runner API, administracijsko sučelje | Test restarta i uklanjanja resursa (na čekanju) |
+| F-024 | Natjecanje bez Runnera | Backend natjecanja i bodovanje | Test s nedostupnim Runnerom (na čekanju) |
 
 ## 2.7 Pregled zahtjeva
 
-**Cilj:** Zabilježiti važne povratne informacije o zahtjevima i odluke koje iz njih proizlaze na dvije formalne kontrolne točke projekta, u 7. i 14. tjednu.
+Povratne informacije s kontrolnih točaka unijet će se tek nakon stvarnih pregleda. Ne označavaju se kao provedene unaprijed.
 
 | Kontrolna točka | Povratna informacija ili nalaz | Odluka o zahtjevu ili opsegu |
 | --- | --- | --- |
-| Iteracija 1 | [Povratna informacija] | [Odluka; vidi odjeljak 2.5] |
-| Demo 2  | [Povratna informacija] | [Odluka; vidi odjeljak 2.5] |
-| Završni pregled | [Povratna informacija] | [Odluka; vidi odjeljak 2.5] |
-
-<details>
-<summary><strong>Odluke o zahtjevima nakon pregleda</strong></summary>
-
-**Primjer scenarija — pregled zahtjeva CrisisMapa:**
-
-| Kontrolna točka | Povratna informacija ili nalaz | Odluka o zahtjevu ili opsegu |
-| --- | --- | --- |
-| Iteracija 1 | Demonstracija pokazuje da odbijanje pristupa lokaciji preglednika onemogućuje podnošenje prijave. | Dogovoriti ručni odabir lokacije; ažurirati F-004 i primjer NF-01 te razlog zabilježiti u odjeljku 2.5. |
-
-**Odluka povezana s povratnom informacijom:** Zapis povezuje opaženo ponašanje s konkretnom promjenom zahtjeva i izbjegava zapisnik cijelog sastanka. Zapišite samo stvarne povratne informacije i odluke za kontrolne točke. Konzultacije u nekom drugom tjednu ne stvaraju dodatnu obaveznu predaju.
-
-</details>
-
----
-
->**Završna provjera:** Zahtjevi su aktualni, provjerljivi i povezani. Svaki važan zahtjev moguće je pratiti od njegova opisa i ponašanja preko mjesta realizacije u sustavu do odgovarajućeg ispitivanja ili druge provjere. Poveznice koriste stvarne identifikatore i nazive iz projektne dokumentacije.
-
+| Iteracija 1 | Na čekanju | Na čekanju |
+| Demo 2 | Na čekanju | Na čekanju |
+| Završni pregled | Na čekanju | Na čekanju |

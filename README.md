@@ -1,51 +1,85 @@
-# Programsko inženjerstvo — FER-UNIZG
+# Ulovko — platforma za CTF natjecanja
 
-Dobro došli u središnji repozitorij kolegija **Programsko inženjerstvo** na Fakultetu elektrotehnike i računarstva Sveučilišta u Zagrebu.
+> **Status:** Projekt je u fazi planiranja i početnog razvoja.
 
-**Važna napomena:** Ovaj `README.md` **nije** predložak za studentske projekte. Kao polazište za README vlastitog projekta koristite [`README_PREDLOZAK.md`](README_PREDLOZAK.md). Potpune upute za projektnu dokumentaciju — opseg, zahtjeve, obrasce uporabe, arhitekturu, ispitivanje, postavljanje, zaključak i aktivnosti grupe — nalaze se u direktoriju [`docs/`](docs/Home.md). **Napomena:** Sva projektna dokumentacija vodi se isključivo unutar direktorija docs/ u obliku međusobno povezanih Markdown dokumenata.
+Ulovko je web platforma za organizaciju i sudjelovanje u CTF natjecanjima, s naglaskom na automatizirano postavljanje zadataka koji zahtijevaju vlastite mrežne servise.
 
-## Svrha
+**Projekt na kolegiju:** Aplikaciju razvija studentski tim u sklopu kolegija [Programsko inženjerstvo](https://www.fer.unizg.hr/predmet/proinz) na Fakultetu elektrotehnike i računarstva Sveučilišta u Zagrebu.
 
-Ovaj repozitorij sadrži službenu strukturu dokumentacije, predloške, primjere i smjernice za studentske projekte na kolegiju Programsko inženjerstvo na FER-u. Služi kao glavno mjesto za praćenje napretka i strukture projektnih zadataka te definira praktične standarde za jasnu dokumentaciju, organizirano upravljanje projektom i transparentnost tijekom razvoja.
+## Opis aplikacije
 
-## Verzije i povijest
+Capture the Flag (CTF) natjecanja sastoje se od zadataka iz računalne sigurnosti, primjerice kriptografije, web sigurnosti, digitalne forenzike i obrnutog inženjerstva. Natjecatelji rješavanjem zadataka pronalaze zastavice (*flags*) te njihovom predajom osvajaju bodove. Osim samog sustava za prijave i bodovanje, organizatori često moraju pripremiti mrežne servise na kojima se pojedini zadaci izvršavaju.
 
-Ovaj repozitorij primjenjuje semantičko verzioniranje (engl. Semantic Versioning). Trenutačna je verzija 3.0.  
-Predložak i pripadajuća struktura dokumentacije kontinuirano se razvijaju i unaprjeđuju od 2015. godine.
+Cilj Ulovka je objediniti te poslove. Organizator unaprijed priprema natjecanje i učitava zadatke, a platforma upravlja objavom sadržaja, rezultatima i, za kontejnerizirane zadatke, pokretanjem pripadajućih servisa.
 
-## Struktura repozitorija
+**Planirane ključne funkcionalnosti:**
 
-Repozitorij sadrži predloške dokumentacije, primjere i pomoćne materijale za projekte na kolegiju Programsko inženjerstvo.
+- Prijava vanjskim pružateljem identiteta te odvojene ovlasti natjecatelja, organizatora i administratora.
+- Natjecanja s vlastitim timovima, rasporedom objave zadataka, predajom zastavica, statičkim ili dinamičkim bodovanjem i ljestvicom rezultata.
+- Učitavanje ZIP paketa zadatka (`config.yaml`, `public/`, `deploy/`), uz odvajanje datoteka namijenjenih natjecateljima od datoteka za izvođenje.
+- *Challenge Runner* za pokretanje kontejneriziranih HTTP i TCP servisa, dodjelu javnih adresa i portova te nadzor njihova rada.
+- Povijest sudjelovanja i osnovna statistika te obavijesti putem Discorda.
+
+Ovo je **planirani opseg**, a ne popis već implementiranih funkcionalnosti. Detalji su u [opsegu projekta](docs/1-Projekt.md) i [analizi zahtjeva](docs/2-Analiza-zahtjeva.md). Ostala projektna dokumentacija nalazi se u direktoriju [docs](docs/Home.md).
+
+<a id="deployment"></a>
+## Postavljanje (deployment)
+
+**Javno dostupna aplikacija:** Još nije postavljena. Adresa će biti dodana nakon prvog javnog postavljanja.
+
+<a id="quick-start"></a>
+## Brzi početak / instalacija
+
+Postupak instalacije još nije definiran jer tehnološki odabir i povezivanje početnih komponenti nisu dovršeni. Ovdje će se nakon prvog funkcionalnog prototipa nalaziti **provjerene** naredbe za pokretanje iz čistog klona repozitorija, zajedno s primjerom konfiguracije bez tajnih podataka.
+
+## Tehnologije
+
+| Tehnologija ili usluga | Predviđena uloga | Razlog ili otvoreno pitanje |
+| --- | --- | --- |
+| PostgreSQL | Relacijski podaci o korisnicima, timovima, natjecanjima i rješenjima | Tim poznaje PostgreSQL, važni su integritet podataka i upiti za rezultate. |
+| Cloudflare R2 bucket storage | ZIP arhive zadataka i javni prilozi | Datoteke je lakše spremati kroz ovakvu tehnologiju nego direktno u bazu. |
+| Docker i K3s | Izgradnja i pokretanje kontejneriziranih zadataka | Cilj je koristiti postojeću orkestraciju. |
+| OpenID Connect / OAuth 2.0 | Prijava vanjskim identitetom | Konkretan pružatelj identiteta bit će dogovoren. |
+| Discord webhooks | Obavijesti o događajima u natjecanju | Domenski relevantna vanjska integracija. |
+
+Frontend i backend tehnologije bit će navedene nakon dogovora i prvog prototipa.
+
+<a id="team-members"></a>
+## Članovi tima
+
+| Član | Predloženo područje odgovornosti |
+| --- | --- |
+| Goran Ivančić | Infrastruktura i Challenge Runner |
+| Borna Mišetić | Baza podataka, SQL i objektna pohrana |
+| Ivona Herout | Backend: korisnici, ovlasti i timovi |
+| Dora Lendvaj | Backend: natjecanja i zadaci |
+| Luka Horvatić | Frontend: natjecateljsko sučelje |
+| Roko Perković | Frontend: organizacijsko i administracijsko sučelje |
+| Goran Vukmanović | Backend: bodovanje, raspored i Discord integracija |
+
+## Doprinos projektu
+
+Plan je pratiti posao kroz GitHub Issues i pull requestove. Prije paralelnog razvoja dogovorit će se API sučelja, pravila za promjene sheme baze i način pregledavanja promjena. Evidencija zadataka i doprinosa članova ažurirat će se tijekom razvoja.
+
+<a id="license"></a>
+## Licenca
+
+Izvorni programski kod projekta Ulovko dostupan je pod [MIT licencom](LICENSE).
+
+Dokumentacijski predložak kolegija Programsko inženjerstvo autora Vlade Sruka i njegovi prilagođeni dijelovi koriste se pod licencom [CC BY-NC-SA 4.0](docs/LICENSE).
+
+Licence platforme ne obuhvaćaju automatski sadržaj CTF zadataka koje učitavaju organizatori.
 
 <a id="ai-usage"></a>
-## Uporaba umjetne inteligencije [![AI Usage: Disclosed](https://img.shields.io/badge/AI%20Usage-Disclosed-blue.svg)](https://www.fer.unizg.hr/_download/repository/Policy%20on%20the%20appropriate%20use%20of%20artificial%20intelligence%20at%20the%20faculty%20of%20electrical%20engineering%20and%20computing%5B1%5D.pdf)
+## Uporaba umjetne inteligencije
 
-Ovaj projekt slijedi FER-ova [pravila o primjerenoj uporabi umjetne inteligencije](https://www.fer.unizg.hr/_download/repository/Policy%20on%20the%20appropriate%20use%20of%20artificial%20intelligence%20at%20the%20faculty%20of%20electrical%20engineering%20and%20computing%5B1%5D.pdf).
+Projekt slijedi FER-ova [pravila o primjerenoj uporabi umjetne inteligencije](https://www.fer.unizg.hr/_download/repository/Policy%20on%20the%20appropriate%20use%20of%20artificial%20intelligence%20at%20the%20faculty%20of%20electrical%20engineering%20and%20computing%5B1%5D.pdf).
 
-**Transparentnost i korišteni alati:** Jezični model umjetne inteligencije Gemini (3.8 Flash) korišten je kao pomoć pri završnom uređivanju dokumentacije i predložaka repozitorija (`README.md` i direktorij `docs/`) te pri izradi i oblikovanju dokumentacije koda projekta.
-
-**Etika, sigurnost i provjera:** Radi točnosti i sigurnosti podataka, sva dokumentacija izrađena uz pomoć umjetne inteligencije neovisno je pregledana i provjerena prije objave. Provjereno je da sadržaj poštuje povjerljivost korisnika i da ne uvodi neprovjerene pristranosti.
-
+<a id="code-of-conduct-and-support"></a>
 ## Kodeks ponašanja
 
-Od studenata se očekuje pridržavanje minimalnih standarda prihvatljivog ponašanja definiranih **Kodeksom ponašanja studenata Fakulteta elektrotehnike i računarstva Sveučilišta u Zagrebu**. Također se očekuje pridržavanje [Etičkog kodeksa IEEE-a](https://www.ieee.org/about/corporate/governance/p7-8.html), koji postavlja visoke standarde integriteta, odgovornog i etičnog profesionalnog ponašanja.
+Članovi tima pridržavaju se pravila kolegija, FER-ova kodeksa ponašanja i [Etičkog kodeksa IEEE-a](https://www.ieee.org/about/corporate/governance/p7-8.html). Za pravila suradnje pogledajte [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md), uz prethodnu provjeru i prilagodbu preuzetog predloška.
 
-**Očekivanja od tima:**
+---
 
-- jasno definirati kako će se rad raspodijeliti među članovima tima i kako će tim komunicirati;
-- primjenjivati dogovorena pravila i standarde pri rješavanju nesuglasica;
-- svi članovi tima dužni su pridržavati se kodeksa ponašanja.
-
-## Licenca [![CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-
-Copyright © 2026 Vlado Sruk
-
-Dokumentacija i materijali u ovom repozitoriju licencirani su licencom **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)**. Djelo možete preuzimati, dijeliti i prilagođavati uz navođenje autora, bez komercijalne uporabe i uz objavu izvedenog djela pod istom licencom.
-
-Predložak dokumentacije razvijen je u okviru kolegija Programsko inženjerstvo na FER-u na temelju višegodišnjeg iskustva rada na studentskim projektima. Njegova je svrha isključivo obrazovna: studentima pružiti jasan, strukturiran i povezan okvir za dokumentiranje ključnih aspekata razvoja programskog sustava. Struktura je namjerno moderna i plitka, prilagođena Git/Markdown dokumentaciji i čitanju na ekranu, bez nepotrebno duboke hijerarhije poglavlja. Usklađen s vremenskim okvirom semestra i ciljevima kolegija, predložak je namjerno sažet na inženjerski minimum potreban za razumijevanje i praktičnu primjenu temeljnih principa struke. Stoga ne teži razini opsega i detalja koja se očekuje u dokumentaciji velikih industrijskih sustava.
-
-Predložak služi kao polazište, a ne ograničenje. Timovi ga mogu prilagoditi i proširiti u skladu sa specifičnostima domene, odabranim tehnologijama, složenošću rješenja i interesima članova tima. Svaka nadopuna pritom treba imati jasnu svrhu i doprinositi kvaliteti rješenja, arhitekture, dokumentacije ili verifikacije projekta, a ne pukom povećanju opsega. Obavezni zahtjevi, način rada i ostala pravila studentskog projekta definirani su na službenoj stranici [Projekt - Programsko inženjerstvo](https://www.fer.unizg.hr/predmet/proinz). Ova licenca se odnosi na predložak dokumentacije i pripadajuće nastavne sadržaje, a ne automatski na studentske projekte izrađene njegovom uporabom.
-
-## Citiranje
-
-Ako koristite ili prilagođavate ovaj repozitorij, citirajte ga prema datoteci [`CITATION.cff`](citation.cff). GitHubova naredba **Cite this repository** automatski čita tu datoteku.
+Struktura dokumentacije prilagođena je predlošku kolegija Programsko inženjerstvo FER-a autora [Vlade Sruka](https://www.fer.unizg.hr/vlado.sruk), licenciranom pod [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/). Licenca predloška ne određuje automatski licencu studentskog projekta.

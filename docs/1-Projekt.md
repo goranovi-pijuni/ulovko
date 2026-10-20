@@ -1,88 +1,81 @@
 # 1. Opseg projekta
 
-**Cilj:** Objasniti odobreni projektni zadatak vlastitim riječima tima. Čitatelj treba razumjeti problem, ciljane korisnike, cilj projekta i njegove granice bez prethodnog čitanja detaljnih zahtjeva.
+> **Radna verzija.** Ovaj tekst opisuje predloženi opseg projekta Ulovko. Konačni opseg biti će definiran kroz rad na aplikaciji.
 
 ## 1.1 Problem i cilj projekta
 
-**Cilj:** Jasno razgraničiti problem koji se rješava od predloženog rješenja i stvarne koristi za korisnika.
+Capture the Flag (CTF) natjecanja sastoje se od zadataka iz računalne sigurnosti, najčešće iz područja kriptografije, web sigurnosti, digitalne forenzike, obrnutog inženjerstva i iskorištavanja ranjivosti. Rješavanjem zadatka natjecatelj pronalazi zastavicu (*flag*) koju predaje sustavu i za to osvaja bodove. Natjecanja se često odvijaju timski, uz javnu ljestvicu rezultata i vremenski ograničeno trajanje.
 
-[Problem, cilj i očekivana korist vlastitim riječima tima.]
+Za organizaciju takvog natjecanja potrebna je aplikacija za prijave korisnika, timove, objavu zadataka, provjeru zastavica i bodovanje. Dio zadataka dodatno zahtijeva vlastite web aplikacije ili TCP servise koje organizator treba pokrenuti, mrežno izložiti i održavati dostupnima tijekom natjecanja. To je zaseban posao koji se često mora pripremati uz samu platformu za bodovanje.
 
-<details>
-<summary><strong>Očekivane koristi i potkrepljujući dokazi</strong></summary>
+**Cilj projekta Ulovko** je povezati ove dvije strane organizacije natjecanja. Organizator će moći unaprijed definirati natjecanje, učitati njegove zadatke i odrediti kada se objavljuju. Platforma će natjecateljima omogućiti pristup zadacima, predaju rješenja i praćenje poretka. Poseban dio projekta bit će *Challenge Runner*: podsustav koji iz deklarativne konfiguracije zadatka pokreće potrebne kontejnere, omogućuje pristup servisima i prati njihovo stanje.
 
-**Primjer — CrisisMap:** „Tijekom teških vremenskih prilika građaninu mogu trebati prijave kriznih događaja relevantne za njegovu lokaciju. CrisisMap ima za cilj prikazati lokacijski relevantne prijave kriznih događaja na karti kako bi ih građanin mogao pronaći na jednom mjestu.” Time su navedeni problem, ciljani korisnik, predložena mogućnost i očekivana korist. Ne tvrdi se da je izmjereno smanjenje vremena reagiranja niti da aplikacija ima integraciju sa službom za hitne intervencije. Tim i dalje mora opisati opseg odobren za vlastiti projekt.
-
-„Aplikacija smanjuje vrijeme odgovora na krizni događaj za 30 % na temelju simulacija.” Broj očekivanu korist čini konkretnijom, ali odmah zahtijeva provjeru: **gdje je simulacija i kako je postotak izračunan?** Ako takav dokaz ne postoji, očekivanu korist navedite bez brojčanog rezultata.
-
-</details>
+Očekivana korist za organizatora je manje ručne konfiguracije infrastrukture za svaki zadatak i jedinstveno mjesto za upravljanje natjecanjem. Natjecateljima sustav pruža jedno sučelje za prijavu, timove, zadatke i rezultate. Ne pretpostavljamo unaprijed izmjerenu uštedu vremena, izvedivost automatiziranog postavljanja provjerit ćemo prototipom.
 
 ## 1.2 Ciljani korisnici i dionici
 
-**Cilj:** Utvrditi osobe, uloge i organizacije čije potrebe i interesi određuju projektni zadatak.
-
-| Skupina korisnika ili dionika | Potreba ili interes relevantan za ovaj projekt |
+| Skupina korisnika ili dionika | Potreba ili interes relevantan za projekt |
 | --- | --- |
-|  |  |
+| Posjetitelj | Pregledati javne informacije o natjecanjima prije prijave. |
+| Natjecatelj | Prijaviti se putem vanjskog identiteta, sudjelovati u natjecanju, raditi u timu, preuzimati zadatke i predavati zastavice. |
+| Organizator natjecanja | Pripremiti natjecanje i njegove zadatke, odrediti raspored, bodovanje i pravila te pratiti rezultate bez ručnog upravljanja svakim servisom. |
+| Administrator platforme | Odobravati organizacijska prava, nadzirati rad sustava i imati pregled aktivnih servisa i pogrešaka. |
+| Održavatelj infrastrukture | Postaviti sustav i provjeriti mrežnu dostupnost, sigurnosna ograničenja, pohranu podataka i životni ciklus kontejnera. Ovu zadaću može obavljati administrator. |
 
-<details>
-<summary><strong>Korisnici, dionici i neobavezna persona</strong></summary>
-
-**Primjer — CrisisMap:**
-
-| Skupina korisnika ili dionika | Potreba ili interes relevantan za ovaj projekt |
-| --- | --- |
-| Građanin | Pronaći informacije o obližnjim kriznim događajima i podnijeti prijavu kriznog događaja s lokacijom. |
-| Koordinator pomoći | Pregledati prijave relevantne za područje i dostupne resurse, ako je koordinacija unutar odobrenog opsega. |
-| Regulatorno tijelo / Agencija za zaštitu podataka (Dionik) | Zahtijeva osiguravanje anonimnosti prijavitelja i zaštitu osobnih podataka (npr. usklađenost s GDPR-om). Ovaj dionik ne koristi aplikaciju, ali definira ograničenja sustava. |
-
-Riječ je o dvjema različitim potrebama, a ne o dvjema izmišljenim biografijama. Akter komunicira s aplikacijom; demonstrator na kolegiju kojem je rezultat zanimljiv ne mora biti akter aplikacije. Koristite uloge i ovlasti iz svojeg odobrenog zadatka. Persona je neobavezna i korisna je kada pomaže riješiti konkretno projektno pitanje.
-
-**Neobavezni primjer persone:** Ana, koordinatorica pomoći, treba aktualne informacije o resursima kako bi mogla rasporediti pomoć. To može pomoći kada tim odlučuje koje informacije koordinator treba vidjeti prve. Personu opišite samo ako objašnjava projektnu odluku; popis izmišljenih biografija nije obavezni rezultat kolegija.
-
-</details>
+Korisnik može sudjelovati u više natjecanja, ali unutar svakog može biti član samo jednog tima. Timovi se osnivaju zasebno za pojedina natjecanja, a pristup se omogućuje pozivnicom ili kodom. Organizatorske ovlasti nisu automatske: registrirani korisnik podnosi zahtjev koji odobrava administrator.
 
 ## 1.3 Granice projekta
 
-**Cilj:** Jasno definirati granice sustava — što je obuhvaćeno odobrenim zadatkom, što je svjesno izostavljeno ili odgođeno te o kojim vanjskim uslugama sustav izravno ovisi.
+**Uključeno u planirani opseg:**
 
-**Uključeno:** [Glavne mogućnosti.]  
-**Izvan opsega ili odgođeno:** [Navedite funkcionalnosti koje su namjerno izostavljene ili prebačene u buduće verzije, uz kratko inženjersko ili vremensko obrazloženje.] 
-**Vanjske ovisnosti:** [Navedite nužne vanjske usluge, API-je, baze podataka ili izvore informacija bez kojih sustav ne može funkcionirati (npr. Google Maps, platni pristupnici, vanjski pružatelj identiteta (OAuth)).]
+- Prijava vanjskim pružateljem identiteta (OpenID Connect / OAuth 2.0), korisnički profili i tri osnovne uloge: natjecatelj, organizator i administrator.
+- Zahtjev za organizatorske ovlasti i administratorsko odobravanje.
+- Više natjecanja koja se mogu odvijati istodobno, sa zasebnim timovima, rasporedom i rezultatima.
+- Stvaranje timova, pozivnice odnosno pristupni kodovi i ograničenje članstva na jedan tim po natjecanju.
+- Izrada natjecanja, objava zadataka prema rasporedu, predaja statičkih zastavica te statičko ili dinamičko bodovanje.
+- Ljestvice rezultata, povijest sudjelovanja i osnovna statistika natjecanja.
+- ZIP paket zadatka s `config.yaml`, `public/` i `deploy/`. Javni prilozi dostupni su natjecateljima, dok konfiguracija za izvođenje i izvori servisa nisu.
+- Integracija s Discordom za obavijesti o događajima u natjecanju.
+- **Ciljana funkcionalnost Challenge Runnera:** izgradnja kontejnerskih slika iz Dockerfileova, pokretanje zadatka u vrijeme njegove objave, automatsko izlaganje HTTP(S) i TCP servisa, privatna komunikacija servisa istog zadatka, nadzor stanja i zaustavljanje po završetku natjecanja.
+- Jedna zajednička instanca kontejneriziranog zadatka po natjecanju, ne po natjecatelju ili timu.
 
-<details>
-<summary><strong>Primjer početne granice projekta</strong></summary>
+Planirana struktura paketa:
 
-**Primjer — CrisisMap:**  
-**Uključeno:** Podnošenje prijave kriznog događaja s lokacijom i pregled prijava na karti.  
-**Isključeno:** Automatsko angažiranje hitnih službi; prikaz prijave ne odobrava niti pokreće službenu intervenciju.  
-**Vanjska ovisnost:** Pružatelj kartografskih usluga omogućuje prikaz karte; aplikacija ostaje odgovorna za vlastite podatke o prijavama.
+```text
+challenge.zip
+├── config.yaml
+├── public/
+│   └── ...         # datoteke koje se daju natjecateljima
+└── deploy/
+    ├── web1/
+    │   ├── Dockerfile
+    │   └── src/
+    └── test/
+        ├── Dockerfile
+        └── ...
+```
 
-Ovo je konkretna granica jer razdvaja prikaz informacija od službenog odgovora hitnih službi i određuje koji sustav osigurava kartu. Izuzeće i ovisnost dio su **nastavnog scenarija**, a ne tvrdnja o tome što objavljena aplikacija stvarno implementira; te činjenice određuju odobreni opseg i stvarna aplikacija tima.
+`config.yaml` opisuje servise i njihove interne portove. Konačna shema nije još dogovorena. Za HTTP servis runner bi trebao vratiti HTTPS adresu oblika `<identifikator>.chal.example.com`, a za sirovi TCP servis adresu i automatski dodijeljeni port, primjerice `tcp.chal.example.com:31252`. Navedene adrese služe samo kao primjer. Servisi unutar istog zadatka trebali bi moći komunicirati privatnom mrežom odnosno internim imenima.
 
-**Drugi primjer korisne granice:** U prvoj implementaciji usredotočite se na koordinaciju odgovora na poplavu. Navedite vrste događaja ili korisnika koje pokriva odobreni projekt umjesto obećavanja svih mogućih kriznih procesa. Predviđanje pomoću umjetne inteligencije ili obuku u virtualnoj stvarnosti navedite kao budući rad samo ako predstavljaju smislen sljedeći korak, a ne kao pretpostavljene funkcionalnosti prve inačice.
+**Izvan opsega ili odgođeno:**
 
-Tvrdnja poput „modularna arhitektura omogućuje brzo postavljanje u novim regijama” zahtijeva stvarno projektno uporište. Ovdje nemojte obećavati prilagodljivost samo zato što zvuči kao poželjna korist projekta.
+- Zasebna instanca zadatka za svakog natjecatelja ili tim, dinamičke zastavice i resetiranje privatnog stanja po timu.
+- Višečvorna orkestracija, automatsko skaliranje, visoka dostupnost i složeno raspoređivanje resursa.
+- Vlastiti sustav orkestracije kontejnera, namjera je koristiti postojeće alate.
+- Složeni načini natjecanja poput Attack–Defense modela, sustav naplate i automatsko otvaranje infrastrukture kod pružatelja oblaka.
+- Jamstvo sigurnog izvođenja proizvoljnog zlonamjernog koda u produkcijskom okruženju. Odobrenje organizatora, ograničenja kontejnera i mrežne politike smanjuju rizik, ali ne predstavljaju potpunu izolaciju na zajedničkom poslužitelju.
 
-Ovaj pregled zadržite na razini opsega: navedite glavnu mogućnost i njezinu granicu bez popisivanja svakog zahtjeva ili projektne pojedinosti. Ono što je stvarno dovršeno i ono što je ostalo nedovršeno navedite u završnim rezultatima, a ne u ovom početnom opisu.
+**Razdvajanje osnovnog sustava i tehničkog rizika:** Osnovna platforma mora podržavati statičke zadatke, timove, rješenja i rezultate i kada Challenge Runner nije dostupan. Automatsko postavljanje zadataka ostaje glavni tehnički cilj projekta, ali neće biti preduvjet za razvoj i ispitivanje ostatka aplikacije.
 
-</details>
+**Vanjske ovisnosti i tehnologije koje se razmatraju:**
+
+- Vanjski pružatelj identiteta za prijavu, konkretan pružatelj još nije odabran.
+- Discord webhooks za slanje obavijesti.
+- Objektno spremište kompatibilno sa S3 API-jem, specifično Cloudflare R2, za datoteke zadataka.
+- Sustav za izgradnju kontejnerskih slika, spremište slika i kontejnersko izvođenje; razmatra se Docker/K3s na jednom čvoru.
+- DNS i TLS konfiguracija za javnu dostupnost web aplikacije te HTTP/TCP zadataka.
 
 ## 1.4 Postojeći pristupi i opravdanost projekta
 
-**Cilj:** Objasniti kako korisnici trenutačno rješavaju problem i koja preostala potreba opravdava odobreni projekt.
+Postojeće platforme, primjerice [CTFd](https://docs.ctfd.io/docs/overview/), već podržavaju upravljanje zadacima, timovima, zastavicama i rezultatima, a CTFd ima i mogućnosti za [postavljanje kontejneriziranih zadataka](https://ctfd.io/features/). Ulovko stoga ne polazi od tvrdnje da takva rješenja ne postoje. Projektni interes je u vlastitoj implementaciji cjelovitog tijeka od ZIP paketa s više servisa i rasporeda objave do pokretanja, dodjele HTTP/TCP adresa i nadzora putem istog sučelja što značajno olakšava održavanje natjecanja.
 
-[U dvije do četiri rečenice opišite jedan postojeći postupak ili relevantno rješenje, što ono već omogućuje i koja konkretna potreba motivira ovaj projekt. Činjenične tvrdnje o vanjskim proizvodima ili praksama potkrijepite izvorom.]
-
-<details>
-<summary><strong>Postojeći pristupi i opravdanost projekta</strong></summary>
-
-**Primjer — CrisisMap:** „Nakon teškog vremenskog događaja građanin će možda morati provjeriti izvor meteoroloških upozorenja i zaseban izvor lokalnih prijava. Predloženi prikaz na karti u CrisisMapu objedinjuje prijave kriznih događaja relevantne za odabranu lokaciju. Aplikacija ne zamjenjuje službena upozorenja ni hitne službe.” Time se objašnjava potreba i namjeravana granica projekta bez tvrdnje da su svi postojeći kanali neučinkoviti. Prva je rečenica **primjer korisničkog scenarija**, a ne izmjeren nalaz o stvarnim korisnicima. Ako tim navodi konkretnu službu upozoravanja ili konkurentski proizvod, treba navesti izvor. Pregled konkurencije i snimke zaslona nisu obavezni.
-
-Ako je postojeće rješenje stvarno utjecalo na projekt, usporedite samo relevantnu funkcionalnost, primjerice jasnoću karte ili potrebnu integraciju. Izbjegavajte unaprijed zadani broj proizvoda ili tablicu kriterija koji nisu povezani s odobrenim zadatkom.
-
-</details>
-
----
-
->**Završna provjera:** Opis problema, cilj projekta, korisnici i dionici, granice opsega te postojeći pristupi međusobno su usklađeni. Navedene koristi ne predstavljaju neprovjerene tvrdnje, a uključene i izostavljene funkcionalnosti odgovaraju odobrenom projektnom zadatku.

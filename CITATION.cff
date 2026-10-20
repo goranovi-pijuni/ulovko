@@ -1,51 +1,33 @@
+
 cff-version: 1.2.0
-message: >-
-  If you use this documentation template in academic work, teaching
-  materials, or software engineering projects, please cite it using
-  the metadata below.
-  Documentation structure adapted from the FER Software Engineering course 
-  template by Vlado Sruk, licensed under CC BY-NC-SA 4.0. 
-title: "Software Engineering Project Documentation Template"
+message: "Ako koristite Ulovko u svom radu, citirajte ovaj repozitorij."
 type: software
+
+title: "Ulovko: platforma za organizaciju CTF natjecanja"
+
 authors:
-  - family-names: "Sruk"
-    given-names: "Vlado"
-    orcid: "https://orcid.org/0000-0003-0411-3398"
-    affiliation: "Sveučilište u Zagrebu Fakultet elektrotehnike i računarstva"
-version: "2.0.0"
-date-released: "2026-09-29"
-repository-code: "https://github.com/VladoSruk/Programsko-inzenjerstvo"
-url: "https://github.com/VladoSruk/Programsko-inzenjerstvo"
-license: "CC-BY-NC-SA-4.0"
-abstract: >-
-  An open educational resource providing a standardized documentation
-  structure for student software projects developed within the
-  Software Engineering course at the Faculty of Electrical Engineering
-  and Computing (FER), University of Zagreb. The template covers
-  project description, requirements, deployment, installation,
-  technology selection rationale, licensing, AI usage disclosure,
-  teamwork reporting, and project governance.
+  - given-names: Goran
+    family-names: Ivančić
+  - given-names: Borna
+    family-names: Mišetić
+  - given-names: Ivona
+    family-names: Herout
+  - given-names: Dora
+    family-names: Lendvaj
+  - given-names: Luka
+    family-names: Horvatić
+  - given-names: Roko
+    family-names: Perković
+  - given-names: Goran
+    family-names: Vukmanović
+
 keywords:
-  - "software engineering"
-  - "project documentation"
-  - "README template"
-  - "GitHub"
-  - "software architecture"
-  - "requirements engineering"
-  - "project management"
-  - "software testing"
-  - "educational resource"
-  - "open educational resources"
-  - "AI usage policy"
-preferred-citation:
-  type: generic
-  authors:
-    - family-names: "Sruk"
-      given-names: "Vlado"
-      orcid: "https://orcid.org/0000-0003-0411-3398"
-  title: "Software Engineering Project Documentation Template"
-  year: 2026
-  version: "3.0.0"
-  url: "https://github.com/VladoSruk/Programsko-inzenjerstvo"
-  institution:
-    name: "Sveučilište u Zagrebu Fakultet elektrotehnike i računarstva"
+  - ctf
+  - cybersecurity
+  - web platform
+  - container orchestration
+
+
+repository-code: "https://github.com/goranovi-pijuni/ulovko"
+license: MIT
+
