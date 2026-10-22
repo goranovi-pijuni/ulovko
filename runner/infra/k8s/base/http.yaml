@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-http
+  namespace: ctf-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-http
+  template:
+    metadata:
+      labels:
+        app: demo-http
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: python:3.12-alpine
+          command: ["python", "-B", "-u", "-c"]
+          args:
+            - |
+              from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+              class Handler(BaseHTTPRequestHandler):
+                  def do_GET(self):
+                      data = b"CTF HTTP demo OK\n"
+                      self.send_response(200)
+                      self.send_header("Content-Type", "text/plain; charset=utf-8")
+                      self.send_header("Content-Length", str(len(data)))
+                      self.end_headers()
+                      self.wfile.write(data)
+              ThreadingHTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+          ports:
+            - name: http
+              containerPort: 8080
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-http
+  namespace: ctf-demo
+spec:
+  selector:
+    app: demo-http
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-http
+  namespace: ctf-demo
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: demo.chal.ulovko.fun
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demo-http
+                port:
+                  name: http

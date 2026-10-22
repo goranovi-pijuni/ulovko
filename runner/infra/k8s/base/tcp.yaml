@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-tcp
+  namespace: ctf-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: demo-tcp
+  template:
+    metadata:
+      labels:
+        app: demo-tcp
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: server
+          image: python:3.12-alpine
+          command: ["python", "-B", "-u", "-c"]
+          args:
+            - |
+              import socketserver
+              class Echo(socketserver.BaseRequestHandler):
+                  def handle(self):
+                      self.request.sendall(b"CTF TCP demo OK\n")
+                      while True:
+                          data = self.request.recv(4096)
+                          if not data:
+                              break
+                          self.request.sendall(data)
+              class Server(socketserver.ThreadingTCPServer):
+                  allow_reuse_address = True
+                  daemon_threads = True
+              with Server(("0.0.0.0", 5000), Echo) as server:
+                  server.serve_forever()
+          ports:
+            - name: tcp
+              containerPort: 5000
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          readinessProbe:
+            tcpSocket:
+              port: tcp
+            initialDelaySeconds: 1
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-tcp
+  namespace: ctf-demo
+spec:
+  selector:
+    app: demo-tcp
+  type: NodePort
+  ports:
+    - name: tcp
+      protocol: TCP
+      port: 5000
+      targetPort: tcp
+      nodePort: 30080
