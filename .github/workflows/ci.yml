@@ -1,40 +1,43 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: Build ${{ matrix.project }}
+  test:
+    name: Test and build
     runs-on: ubuntu-latest
-
-    strategy:
-      fail-fast: false
-      matrix:
-        project:
-          - backend
-          - frontend
-
-    defaults:
-      run:
-        working-directory: ${{ matrix.project }}
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
         with:
-          node-version: "22"
+          node-version: '22'
           cache: npm
-          cache-dependency-path: ${{ matrix.project }}/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Run unit tests
+        run: npm test -- --runInBand
+
       - name: Build application
         run: npm run build
+
+  deploy:
+    name: Deploy production
+    needs: test
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    uses: ./.github/workflows/cd.yml
+    secrets: inherit
