@@ -1,0 +1,71 @@
+name: Backend CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  backend:
+    name: Test and build
+    runs-on: ubuntu-latest
+
+    outputs:
+      deploy: ${{ steps.changes.outputs.deploy }}
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Detect backend changes
+        id: changes
+        uses: dorny/paths-filter@v4
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            test:
+              - 'backend/**'
+              - '.github/workflows/backend-ci.yml'
+              - '.github/workflows/backend-deploy.yml'
+            deploy:
+              - 'backend/**'
+
+      - name: Set up Node.js
+        if: steps.changes.outputs.test == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        if: steps.changes.outputs.test == 'true'
+        run: npm ci
+
+      - name: Run unit tests
+        if: steps.changes.outputs.test == 'true'
+        run: npx vitest run
+
+      - name: Build application
+        if: steps.changes.outputs.test == 'true'
+        run: npm run build
+
+  deploy:
+    name: Deploy backend
+    needs: backend
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.backend.outputs.deploy == 'true'
+
+    uses: ./.github/workflows/backend-deploy.yml
+    secrets: inherit
