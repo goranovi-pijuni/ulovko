@@ -1,0 +1,64 @@
+name: Runner CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  runner:
+    name: Validate runner infrastructure
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Detect runner changes
+        id: changes
+        uses: dorny/paths-filter@v4
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            validate:
+              - 'infra/runner-vps/**'
+              - '.github/workflows/runner-ci.yml'
+            runner:
+              - 'runner/**'
+
+      - name: Check Bash syntax
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          find infra/runner-vps -type f -name '*.sh' -print0 |
+            xargs -0 -r -n1 bash -n
+
+      - name: Install ShellCheck
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          find infra/runner-vps -type f -name '*.sh' -print0 |
+            xargs -0 -r shellcheck
+
+      - name: Install kubectl
+        if: steps.changes.outputs.validate == 'true'
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Validate Kustomize build
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          kubectl kustomize infra/runner-vps/k8s/base \
+            > /tmp/runner-manifests.yaml
+
+          test -s /tmp/runner-manifests.yaml

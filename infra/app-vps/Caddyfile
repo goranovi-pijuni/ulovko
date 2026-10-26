@@ -1,0 +1,13 @@
+# Public application API. The SPA/frontend can be added to the fallback later.
+api.ulovko.fun {
+    @api path /api /api/*
+
+    handle @api {
+        # uri strip_prefix /api
+        reverse_proxy 127.0.0.1:3000
+    }
+
+    handle {
+        respond "Not Found" 404
+    }
+}

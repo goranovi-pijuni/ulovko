@@ -1,0 +1,18 @@
+[Unit]
+Description=Ulovko NestJS backend
+After=network.target
+
+[Service]
+Type=simple
+User=ctfapi
+Group=ctfapi
+WorkingDirectory=/opt/ctf/backend
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node /opt/ctf/backend/dist/main.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
