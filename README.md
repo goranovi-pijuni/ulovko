@@ -1,6 +1,6 @@
 # Ulovko — platforma za CTF natjecanja
 
-> **Status:** Projekt je u fazi planiranja i početnog razvoja.
+> **Status:** Projekt je u fazi početnog razvoja. Osnovni backend i infrastruktura već su postavljeni, dok su glavne funkcionalnosti platforme još u razvoju.
 
 Ulovko je web platforma za organizaciju i sudjelovanje u CTF natjecanjima, s naglaskom na automatizirano postavljanje zadataka koji zahtijevaju vlastite mrežne servise.
 
@@ -25,24 +25,72 @@ Ovo je **planirani opseg**, a ne popis već implementiranih funkcionalnosti. Det
 <a id="deployment"></a>
 ## Postavljanje (deployment)
 
-**Javno dostupna aplikacija:** Još nije postavljena. Adresa će biti dodana nakon prvog javnog postavljanja.
+**Javno dostupna aplikacija:** Backend API dostupan je na [api.ulovko.fun/api](https://api.ulovko.fun/api). Frontend još nije postavljen.
+
+Infrastruktura je podijeljena na dva VPS poslužitelja:
+
+- **App VPS:** NestJS backend pokrenut kao systemd servis, uz Caddy za HTTPS i reverse proxy.
+- **Runner VPS:** K3s klaster za izvođenje kontejneriziranih CTF zadataka. Trenutačno su postavljeni demonstracijski HTTP i TCP servisi.
+
+Konfiguracija i upute za postavljanje nalaze se u [infra/app-vps](infra/app-vps/README.md) i [infra/runner-vps](infra/runner-vps/README.md).
 
 <a id="quick-start"></a>
 ## Brzi početak / instalacija
 
-Postupak instalacije još nije definiran jer tehnološki odabir i povezivanje početnih komponenti nisu dovršeni. Ovdje će se nakon prvog funkcionalnog prototipa nalaziti **provjerene** naredbe za pokretanje iz čistog klona repozitorija, zajedno s primjerom konfiguracije bez tajnih podataka.
+### Lokalni razvoj
+
+Za lokalno pokretanje backenda potrebni su Node.js 22 i npm.
+
+```bash
+cd backend
+npm ci
+npm run start:dev
+```
+
+Backend se pokreće na `http://localhost:3000`. Trenutačno nije potrebna dodatna `.env` datoteka.
+
+Za pokretanje testova i provjeru izgradnje:
+
+```bash
+npx vitest run
+npm run build
+```
+
+### Postavljanje na VPS
+
+Postavljanje infrastrukture automatizirano je pomoću skripti za inicijalno konfiguriranje poslužitelja:
+
+```bash
+# App VPS
+sudo bash infra/app-vps/provision.sh --deploy-key /putanja/do/javnog-kljuca.pub
+
+# Runner VPS
+sudo bash infra/runner-vps/provision.sh
+```
+
+Skripte se pokreću na odgovarajućim VPS poslužiteljima, iz korijenskog direktorija kloniranog repozitorija.
+
+Detaljni preduvjeti, konfiguracija SSH ključeva, DNS-a i GitHub Actions nalaze se u pripadajućoj dokumentaciji:
+
+- [App VPS — instalacija i deployment](infra/app-vps/README.md)
+- [Runner VPS — instalacija i provjera K3s klastera](infra/runner-vps/README.md)
+
+Backend koristi GitHub Actions za automatsko testiranje i objavu promjena na `main` grani. Infrastruktura runner VPS-a provjerava se zasebnim CI postupkom.
 
 ## Tehnologije
 
-| Tehnologija ili usluga | Predviđena uloga | Razlog ili otvoreno pitanje |
+| Tehnologija ili usluga | Uloga | Status ili razlog odabira |
 | --- | --- | --- |
-| PostgreSQL | Relacijski podaci o korisnicima, timovima, natjecanjima i rješenjima | Tim poznaje PostgreSQL, važni su integritet podataka i upiti za rezultate. |
-| Cloudflare R2 bucket storage | ZIP arhive zadataka i javni prilozi | Datoteke je lakše spremati kroz ovakvu tehnologiju nego direktno u bazu. |
-| Docker i K3s | Izgradnja i pokretanje kontejneriziranih zadataka | Cilj je koristiti postojeću orkestraciju. |
-| OpenID Connect / OAuth 2.0 | Prijava vanjskim identitetom | Konkretan pružatelj identiteta bit će dogovoren. |
-| Discord webhooks | Obavijesti o događajima u natjecanju | Domenski relevantna vanjska integracija. |
+| NestJS / Node.js | Backend aplikacija i REST API | U uporabi, strukturirani razvoj backenda |
+| Caddy / systemd | HTTPS, reverse proxy i upravljanje backend servisom | U uporabi na aplikacijskom VPS-u |
+| GitHub Actions | Automatsko testiranje i deployment | U uporabi za CI/CD |
+| PostgreSQL | Relacijski podaci o korisnicima, timovima, natjecanjima i rješenjima | Planirano, integritet podataka i upiti za rezultate |
+| Cloudflare R2 bucket storage | ZIP arhive zadataka i javni prilozi | Planirano, odvajanje datoteka od relacijske baze |
+| Docker i K3s | Izgradnja i pokretanje kontejneriziranih zadataka | K3s demonstracijska infrastruktura postavljena |
+| OpenID Connect / OAuth 2.0 | Prijava vanjskim identitetom | Konkretan pružatelj identiteta bit će dogovoren |
+| Discord webhooks | Obavijesti o događajima u natjecanju | Planirano |
 
-Frontend i backend tehnologije bit će navedene nakon dogovora i prvog prototipa.
+Frontend tehnologije bit će navedene nakon dogovora i prvog prototipa.
 
 <a id="team-members"></a>
 ## Članovi tima
@@ -59,7 +107,9 @@ Frontend i backend tehnologije bit će navedene nakon dogovora i prvog prototipa
 
 ## Doprinos projektu
 
-Plan je pratiti posao kroz GitHub Issues i pull requestove. Prije paralelnog razvoja dogovorit će se API sučelja, pravila za promjene sheme baze i način pregledavanja promjena. Evidencija zadataka i doprinosa članova ažurirat će se tijekom razvoja.
+Posao se prati kroz GitHub Issues i pull requestove. Promjene na glavnoj grani (`main`) podliježu automatskim provjerama putem GitHub Actions, a objava backenda automatizirana je nakon uspješnih provjera.
+
+Prije daljnjeg paralelnog razvoja dogovorit će se API sučelja, pravila za promjene sheme baze i način pregledavanja promjena. Evidencija zadataka i doprinosa članova ažurirat će se tijekom razvoja.
 
 <a id="license"></a>
 ## Licenca

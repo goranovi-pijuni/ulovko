@@ -10,8 +10,8 @@ command -v curl >/dev/null || {
   exit 1
 }
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CONFIG_SRC="$ROOT_DIR/infra/k3s/config.yaml"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_SRC="$ROOT_DIR/k3s/config.yaml"
 CONFIG_DST='/etc/rancher/k3s/config.yaml'
 
 if [[ -f "$CONFIG_DST" ]] && ! cmp -s "$CONFIG_SRC" "$CONFIG_DST"; then
