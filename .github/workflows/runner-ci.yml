@@ -47,7 +47,7 @@ jobs:
 
       - name: Set up uv
         if: steps.changes.outputs.runner == 'true'
-        uses: astral-sh/setup-uv@v9
+        uses: astral-sh/setup-uv@v10.3.2
         with:
           enable-cache: true
           cache-dependency-glob: runner/uv.lock
