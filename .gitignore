@@ -83,3 +83,5 @@ out
 
 # pnpm
 .pnpm-store
+
+__pycache__

@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: runner-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: runner-api
+  namespace: runner-system
+---
+# Cluster-wide node access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: runner-node-reader
+rules:
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: runner-node-reader
+subjects:
+  - kind: ServiceAccount
+    name: runner-api
+    namespace: runner-system
+roleRef:
+  kind: ClusterRole
+  name: runner-node-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Namespace-specific workload access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: runner-workload-reader
+  namespace: ctf-demo
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list"]
+
+  - apiGroups: [""]
+    resources: ["pods", "services"]
+    verbs: ["get", "list"]
+
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: runner-workload-reader
+  namespace: ctf-demo
+subjects:
+  - kind: ServiceAccount
+    name: runner-api
+    namespace: runner-system
+roleRef:
+  kind: Role
+  name: runner-workload-reader
+  apiGroup: rbac.authorization.k8s.io
