@@ -1,0 +1,23 @@
+[Unit]
+Description=Ulovko Challenge Runner API
+After=network-online.target k3s.service
+Wants=network-online.target
+Requires=k3s.service
+
+[Service]
+Type=simple
+User=ctf-runner
+Group=ctf-runner
+WorkingDirectory=/opt/ctf/runner
+EnvironmentFile=/etc/ulovko/runner.env
+ExecStart=/opt/ctf/runner/.venv/bin/uvicorn runner.main:app --host ${RUNNER_BIND_HOST} --port 8000
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

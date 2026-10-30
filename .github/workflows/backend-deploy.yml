@@ -2,12 +2,14 @@ name: CD
 
 on:
   workflow_call:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   production:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     defaults:
@@ -64,6 +66,42 @@ jobs:
             package.json package-lock.json \
             "deploy@${HOST}:/opt/ctf/backend/"
 
+      - name: Upload application environment
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          APP_ENV: ${{ secrets.APP_ENV }}
+          RUNNER_API_TOKEN: ${{ secrets.RUNNER_API_TOKEN }}
+          RUNNER_API_URL: ${{ vars.RUNNER_API_URL }}
+        run: |
+          test -n "$APP_ENV" && test -n "$RUNNER_API_TOKEN" && test -n "$RUNNER_API_URL"
+          [[ "$RUNNER_API_TOKEN" =~ ^[A-Za-z0-9_-]{32,}$ ]] || exit 1
+          [[ "$RUNNER_API_URL" =~ ^https?://[a-zA-Z0-9.:-]+/?$ ]] || {
+            echo 'RUNNER_API_URL must be a trusted HTTP(S) host and optional port.' >&2
+            exit 1
+          }
+
+          umask 077
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+
+          # The GitHub secret contains all other application environment values.
+          # Reserve the shared runner credentials for dedicated GitHub settings.
+          if [[ -n "$APP_ENV" ]]; then
+            printf '%s\n' "$APP_ENV" > "$env_file"
+            if grep -Eq '^[[:space:]]*(RUNNER_API_TOKEN|RUNNER_API_URL)[[:space:]]*=' "$env_file"; then
+              echo 'APP_ENV must not redefine RUNNER_API_TOKEN or RUNNER_API_URL.' >&2
+              exit 1
+            fi
+          fi
+          {
+            printf 'RUNNER_API_TOKEN=%s\n' "$RUNNER_API_TOKEN"
+            printf 'RUNNER_API_URL=%s\n' "$RUNNER_API_URL"
+          } >> "$env_file"
+
+          SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -az -e "$SSH" "$env_file" \
+            "deploy@${HOST}:/opt/ctf/backend/.env.next"
+
       - name: Install production dependencies and restart
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
@@ -75,6 +113,8 @@ jobs:
           set -euo pipefail
 
           cd /opt/ctf/backend
+          chmod 600 .env.next
+          mv -f .env.next .env
           npm ci --omit=dev
 
           sudo systemctl restart ctf-backend.service

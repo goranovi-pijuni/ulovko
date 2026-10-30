@@ -1,5 +1,5 @@
 [Unit]
-Description=Ulovko NestJS backend
+Description=Ulovko Backend
 After=network.target
 
 [Service]
@@ -7,8 +7,7 @@ Type=simple
 User=ctfapi
 Group=ctfapi
 WorkingDirectory=/opt/ctf/backend
-Environment=NODE_ENV=production
-Environment=PORT=3000
+EnvironmentFile=-/opt/ctf/backend/.env
 ExecStart=/usr/bin/node /opt/ctf/backend/dist/main.js
 Restart=on-failure
 RestartSec=5
