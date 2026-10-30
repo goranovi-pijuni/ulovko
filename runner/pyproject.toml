@@ -27,6 +27,9 @@ dev = [
     "ruff>=0.17.3",
 ]
 
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends"]
+
 [tool.pyright]
 typeCheckingMode = "basic"
 reportOptionalMemberAccess = "none"
