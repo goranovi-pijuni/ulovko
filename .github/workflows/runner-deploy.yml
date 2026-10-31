@@ -1,0 +1,104 @@
+name: Runner CD
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    concurrency:
+      group: ulovko-runner-production
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.RUNNER_DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.RUNNER_DEPLOY_KNOWN_HOSTS }}
+        run: |
+          test -n "$SSH_KEY" && test -n "$KNOWN_HOSTS"
+
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload runner to VPS
+        env:
+          HOST: ${{ secrets.RUNNER_DEPLOY_HOST }}
+        run: |
+          test -n "$HOST"
+          SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+
+          # Keep the VPS virtual environment and infrastructure files.
+          rsync -az --delete \
+            --exclude='/.venv/' --exclude='/infra/' --exclude='/runner.env.next' \
+            -e "$SSH" \
+            runner/ "deploy@${HOST}:/opt/ctf/runner/"
+
+          rsync -az --delete -e "$SSH" \
+            infra/runner-vps/ "deploy@${HOST}:/opt/ctf/runner/infra/runner-vps/"
+
+      - name: Upload runner configuration
+        env:
+          HOST: ${{ secrets.RUNNER_DEPLOY_HOST }}
+          RUNNER_API_TOKEN: ${{ secrets.RUNNER_API_TOKEN }}
+          RUNNER_BIND_HOST: ${{ vars.RUNNER_BIND_HOST }}
+          RUNNER_HTTP_SCHEME: ${{ vars.RUNNER_HTTP_SCHEME }}
+          RUNNER_TCP_HOST: ${{ vars.RUNNER_TCP_HOST }}
+        run: |
+          test -n "$HOST" && test -n "$RUNNER_API_TOKEN"
+          [[ "$RUNNER_API_TOKEN" =~ ^[A-Za-z0-9_-]{32,}$ ]] || {
+            echo 'RUNNER_API_TOKEN must be an opaque random token (32+ URL-safe characters).' >&2
+            exit 1
+          }
+
+          RUNNER_BIND_HOST="${RUNNER_BIND_HOST:-127.0.0.1}"
+          [[ "$RUNNER_BIND_HOST" =~ ^[a-zA-Z0-9.:-]+$ ]] || exit 1
+          [[ -z "$RUNNER_HTTP_SCHEME" || "$RUNNER_HTTP_SCHEME" == 'http' || "$RUNNER_HTTP_SCHEME" == 'https' ]] || exit 1
+          [[ -z "$RUNNER_TCP_HOST" || "$RUNNER_TCP_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || exit 1
+
+          umask 077
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+
+          {
+            printf 'RUNNER_API_TOKEN=%s\n' "$RUNNER_API_TOKEN"
+            printf 'KUBECONFIG=/etc/ulovko/runner.kubeconfig\n'
+            printf 'RUNNER_CHALLENGE_NAMESPACE=ctf-demo\n'
+            printf 'RUNNER_BIND_HOST=%s\n' "$RUNNER_BIND_HOST"
+            if [[ -n "$RUNNER_HTTP_SCHEME" ]]; then
+              printf 'RUNNER_HTTP_SCHEME=%s\n' "$RUNNER_HTTP_SCHEME"
+            fi
+            if [[ -n "$RUNNER_TCP_HOST" ]]; then
+              printf 'RUNNER_TCP_HOST=%s\n' "$RUNNER_TCP_HOST"
+            fi
+          } > "$env_file"
+
+          SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -az -e "$SSH" "$env_file" \
+            "deploy@${HOST}:/opt/ctf/runner/runner.env.next"
+
+      - name: Install dependencies and restart
+        env:
+          HOST: ${{ secrets.RUNNER_DEPLOY_HOST }}
+        run: |
+          ssh -i "$HOME/.ssh/id_ed25519" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            "deploy@${HOST}" \
+            'sudo -n /usr/local/sbin/ctf-runner-deploy'

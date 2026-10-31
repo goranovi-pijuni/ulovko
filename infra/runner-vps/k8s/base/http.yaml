@@ -3,6 +3,11 @@ kind: Deployment
 metadata:
   name: demo-http
   namespace: ctf-demo
+  labels:
+    app.kubernetes.io/managed-by: ulovko-runner
+    ulovko.fun/competition-id: demo-competition
+    ulovko.fun/task-id: demo-challenge
+    ulovko.fun/service: web1
 spec:
   replicas: 1
   selector:
@@ -12,6 +17,10 @@ spec:
     metadata:
       labels:
         app: demo-http
+        app.kubernetes.io/managed-by: ulovko-runner
+        ulovko.fun/competition-id: demo-competition
+        ulovko.fun/task-id: demo-challenge
+        ulovko.fun/service: web1
     spec:
       automountServiceAccountToken: false
       securityContext:
