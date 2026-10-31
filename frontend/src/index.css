@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* Shared design tokens. shadcn/ui will extend these when it is initialised. */
+@theme {
+  --font-sans:
+    'DM Sans Variable', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, monospace;
+
+  /* Main colour palette from the Figma design ("ColorPalette" frame).
+     Each scale runs from light (100) to dark (700): dark shades are for
+     backgrounds, light shades for buttons and interactive elements. */
+
+  /* Primary: competitor pages and login; 700 is the page background. */
+  --color-primary-100: #edf1f4;
+  --color-primary-200: #bfd1db;
+  --color-primary-300: #94aab6;
+  --color-primary-400: #73848e;
+  --color-primary-500: #536067;
+  --color-primary-600: #353e43;
+  --color-primary-700: #1a1f22;
+
+  /* Organizer pages; 700 is the page background. */
+  --color-organizer-100: #f3f0ee;
+  --color-organizer-200: #d8cac3;
+  --color-organizer-300: #b8a295;
+  --color-organizer-400: #8f7d73;
+  --color-organizer-500: #685a53;
+  --color-organizer-600: #433a35;
+  --color-organizer-700: #221c19;
+
+  /* Secondary accents for buttons, badges and highlights. */
+  --color-accent-green-100: #e6f5e4;
+  --color-accent-green-200: #b9dbb3;
+  --color-accent-green-300: #96b291;
+  --color-accent-green-400: #758b71;
+  --color-accent-green-500: #556652;
+  --color-accent-green-600: #374335;
+  --color-accent-green-700: #1c231a;
+
+  --color-accent-purple-100: #f3f0f3;
+  --color-accent-purple-200: #d1c6d3;
+  --color-accent-purple-300: #b09cb4;
+  --color-accent-purple-400: #8d7691;
+  --color-accent-purple-500: #665469;
+  --color-accent-purple-600: #413543;
+  --color-accent-purple-700: #1f1921;
+
+  /* Achromatic: general use, mostly text. */
+  --color-ink-100: #f0f1f1;
+  --color-ink-200: #cacfd1;
+  --color-ink-300: #a3a8aa;
+  --color-ink-400: #7e8284;
+  --color-ink-500: #5c5e60;
+  --color-ink-600: #3b3d3e;
+  --color-ink-700: #1d1e1f;
+}
+
+body {
+  @apply bg-primary-700 font-sans text-ink-100 antialiased;
+}
