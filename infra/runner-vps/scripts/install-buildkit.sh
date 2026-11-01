@@ -23,8 +23,11 @@ elif command -v apt-get >/dev/null 2>&1; then
     version='0.34.1'
     arch="$(dpkg --print-architecture)"
     case "$arch" in
-      amd64|arm64) ;;
-      *) echo "Unsupported BuildKit architecture: $arch" >&2; exit 1 ;;
+    amd64 | arm64) ;;
+    *)
+      echo "Unsupported BuildKit architecture: $arch" >&2
+      exit 1
+      ;;
     esac
     archive="$(mktemp)"
     trap 'rm -f "$archive"' EXIT
@@ -80,13 +83,37 @@ fi
 # Ubuntu 24.04+ can restrict unprivileged user namespaces with AppArmor.
 # Provide a narrowly targeted allowance for the rootlesskit executable
 # without globally disabling the kernel protection.
+# Ubuntu may already provide a RootlessKit AppArmor profile.
 if [[ -r /proc/sys/kernel/apparmor_restrict_unprivileged_userns ]] &&
-   [[ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" == 1 ]] &&
-   command -v apparmor_parser >/dev/null 2>&1 &&
-   [[ ! -f /etc/apparmor.d/usr.bin.rootlesskit ]]; then
-  install -m 0644 -o root -g root "$ROOT_DIR/rootlesskit.apparmor" \
-    /etc/apparmor.d/usr.bin.rootlesskit
-  apparmor_parser -r /etc/apparmor.d/usr.bin.rootlesskit
+  [[ "$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)" == 1 ]]; then
+
+  command -v apparmor_parser >/dev/null || {
+    echo 'AppArmor parser is required.' >&2
+    exit 1
+  }
+
+  custom='/etc/apparmor.d/usr.bin.rootlesskit'
+  packaged='/etc/apparmor.d/rootlesskit'
+
+  if [[ -f "$packaged" ]]; then
+    # Clean up the duplicate created by earlier Ulovko provisioning.
+    if [[ -f "$custom" ]]; then
+      if cmp -s "$ROOT_DIR/rootlesskit.apparmor" "$custom"; then
+        apparmor_parser -R "$custom" || true
+        rm -f "$custom"
+      else
+        echo "Unrecognized conflicting AppArmor profile: $custom" >&2
+        exit 1
+      fi
+    fi
+
+    apparmor_parser -r "$packaged"
+  else
+    # Fallback for systems without a packaged RootlessKit profile.
+    install -m 0644 -o root -g root \
+      "$ROOT_DIR/rootlesskit.apparmor" "$custom"
+    apparmor_parser -r "$custom"
+  fi
 fi
 
 install -d -m 0755 -o root -g root /etc/buildkit
