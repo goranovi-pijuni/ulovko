@@ -1,5 +1,6 @@
 import fcntl
 import json
+import logging
 import os
 import re
 import shutil
@@ -15,6 +16,8 @@ from runner.services.package import load_local_config, resolve_build_contexts
 BUILD_ID = re.compile(r"[0-9a-f]{32}\Z")
 BUILD_ROOT = "/var/lib/ctf-runner/builds"
 BUILDKIT_SOCKET = BUILDKIT_ADDRESS.removeprefix("unix://")
+
+logger = logging.getLogger(__name__)
 
 
 def builds_root() -> Path:
@@ -149,6 +152,7 @@ def process_next_job() -> bool:
         job["images"] = {name: path.name for name, path in images.items()}
         job["status"] = "succeeded"
     except Exception as exc:
+        logger.exception("Build job failed")
         job["status"] = "failed"
         job["images"] = {}
         job["error"] = str(exc)

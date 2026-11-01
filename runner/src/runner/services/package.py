@@ -40,7 +40,7 @@ def parse_config(data: str | bytes) -> ChallengeConfig:
         raise ValueError("Invalid config.yaml") from exc
 
     if not isinstance(parsed, dict):
-        raise ValueError("config.yaml must contain a mapping")
+        raise TypeError("config.yaml must contain a mapping")
 
     return ChallengeConfig.model_validate(parsed)
 
