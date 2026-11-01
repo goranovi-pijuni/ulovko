@@ -1,13 +1,30 @@
-# Public application API. The SPA/frontend can be added to the fallback later.
+# NestJS API; retain the /api prefix when forwarding.
 api.ulovko.fun {
     @api path /api /api/*
 
     handle @api {
-        # uri strip_prefix /api
         reverse_proxy 127.0.0.1:3000
     }
 
     handle {
         respond "Not Found" 404
+    }
+}
+
+# React/Vite static SPA.
+ulovko.fun {
+    root * /opt/ctf/frontend/dist
+    encode zstd gzip
+
+    # Missing built assets should return 404 instead of SPA HTML.
+    @assets path /assets/*
+    handle @assets {
+        file_server
+    }
+
+    # TanStack Router: client-side routes should serve index.html.
+    handle {
+        try_files {path} /index.html
+        file_server
     }
 }

@@ -2,9 +2,10 @@
 set -Eeuo pipefail
 
 # Provision the Ulovko application VPS (Debian/Ubuntu, systemd).
-
+# The backend runs as a systemd service; Caddy serves the static frontend.
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 APP_DIR="/opt/ctf/backend"
+FRONTEND_DIR="/opt/ctf/frontend/dist"
 SERVICE_NAME="ctf-backend.service"
 DEPLOY_KEY_FILE=""
 
@@ -119,6 +120,10 @@ install -d -m 0755 -o root -g root /opt/ctf
 install -d -m 0755 -o deploy -g deploy "$APP_DIR"
 chown -R deploy:deploy "$APP_DIR"
 
+# Caddy only needs read/traverse permissions on the built static files.
+# The deploy user uploads these files directly; no frontend service is needed.
+install -d -m 0755 -o deploy -g deploy /opt/ctf/frontend "$FRONTEND_DIR"
+
 log "Installing restricted systemd permissions for GitHub Actions"
 cat >/etc/sudoers.d/ctf-deploy <<'SUDOERS'
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart ctf-backend.service, /usr/bin/systemctl is-active ctf-backend.service
@@ -141,7 +146,7 @@ if [[ -n "$DEPLOY_KEY_FILE" ]]; then
   chown deploy:deploy /home/deploy/.ssh/authorized_keys
   chmod 0600 /home/deploy/.ssh/authorized_keys
 else
-  echo "No --deploy-key given: provide a deploy public key before using GitHub Actions."
+  echo "No --deploy-key given: reusing existing deploy keys, if configured."
 fi
 
 log "Installing and enabling the NestJS systemd service"
@@ -175,6 +180,8 @@ fi
 log "Provisioning finished"
 echo "Node: $(/usr/bin/node --version)"
 echo "Caddy: $(caddy version)"
-echo "Application directory: $APP_DIR"
+echo "Backend directory: $APP_DIR"
+echo "Frontend build directory: $FRONTEND_DIR"
 echo "Backend systemd unit: $SERVICE_NAME"
-echo "Caddy site: https://api.ulovko.fun/api"
+echo "API site: https://api.ulovko.fun/api"
+echo "Frontend site: https://ulovko.fun"
