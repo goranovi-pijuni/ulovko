@@ -19,6 +19,7 @@ ProtectHome=true
 ProtectSystem=strict
 PrivateTmp=true
 ReadWritePaths=/var/lib/ctf-runner/builds
+Environment=DOCKER_CONFIG=/var/lib/ctf-runner/builds/.docker
 Environment=PYTHONDONTWRITEBYTECODE=1
 
 [Install]
