@@ -1,0 +1,11 @@
+[Unit]
+Description=Periodically refresh Ulovko runner Kubernetes token
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=20min
+Persistent=true
+Unit=ctf-runner-token.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,2 @@
+[otel]
+  socketPath = "/run/ulovko-buildkit/otel-grpc.sock"

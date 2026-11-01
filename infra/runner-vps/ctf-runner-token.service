@@ -1,0 +1,8 @@
+[Unit]
+Description=Refresh Ulovko runner Kubernetes token
+After=k3s.service
+Requires=k3s.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/ulovko/refresh-token.sh

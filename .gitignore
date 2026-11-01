@@ -83,3 +83,7 @@ out
 
 # pnpm
 .pnpm-store
+
+__pycache__
+
+**/dist/

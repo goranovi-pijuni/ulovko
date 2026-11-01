@@ -1,0 +1,17 @@
+[Unit]
+Description=Ulovko Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ctfapi
+Group=ctfapi
+WorkingDirectory=/opt/ctf/backend
+EnvironmentFile=-/opt/ctf/backend/.env
+ExecStart=/usr/bin/node /opt/ctf/backend/dist/main.js
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

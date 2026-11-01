@@ -1,0 +1,122 @@
+name: Runner CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  runner:
+    name: Test runner and validate infrastructure
+    runs-on: ubuntu-latest
+
+    outputs:
+      deploy: ${{ steps.changes.outputs.deploy }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Detect runner changes
+        id: changes
+        uses: dorny/paths-filter@v4
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            validate:
+              - 'infra/runner-vps/**'
+              - '.github/workflows/runner-ci.yml'
+              - '.github/workflows/runner-deploy.yml'
+            runner:
+              - 'runner/**'
+              - '.github/workflows/runner-ci.yml'
+              - '.github/workflows/runner-deploy.yml'
+            deploy:
+              - 'runner/**'
+              - 'infra/runner-vps/ctf-runner*.service'
+              - 'infra/runner-vps/ctf-runner*.timer'
+              - 'infra/runner-vps/scripts/deploy.sh'
+              - 'infra/runner-vps/scripts/refresh-token.sh'
+              - 'infra/runner-vps/k8s/runner-api/**'
+              - '.github/workflows/runner-deploy.yml'
+
+      - name: Set up uv
+        if: steps.changes.outputs.runner == 'true'
+        uses: astral-sh/setup-uv@v10.3.2
+        with:
+          enable-cache: true
+          cache-dependency-glob: runner/uv.lock
+
+      - name: Install dependencies
+        if: steps.changes.outputs.runner == 'true'
+        working-directory: runner
+        run: uv sync --locked
+
+      - name: Check Python syntax
+        if: steps.changes.outputs.runner == 'true'
+        working-directory: runner
+        run: uv run --locked python -m compileall -q src
+
+      - name: Lint Python
+        if: steps.changes.outputs.runner == 'true'
+        working-directory: runner
+        run: uv run --locked ruff check .
+
+      - name: Run unit tests
+        if: steps.changes.outputs.runner == 'true'
+        working-directory: runner
+        run: |
+          if find tests -name 'test_*.py' -print -quit 2>/dev/null | grep -q .; then
+            uv run --locked pytest -q
+          else
+            echo 'No runner unit tests yet.'
+          fi
+
+      - name: Check Bash syntax
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          find infra/runner-vps -type f -name '*.sh' -print0 |
+            xargs -0 -r -n1 bash -n
+
+      - name: Install ShellCheck
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Lint shell scripts
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          find infra/runner-vps -type f -name '*.sh' -print0 |
+            xargs -0 -r shellcheck
+
+      - name: Install kubectl
+        if: steps.changes.outputs.validate == 'true'
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Validate Kustomize build
+        if: steps.changes.outputs.validate == 'true'
+        run: |
+          kubectl kustomize infra/runner-vps/k8s/base \
+            > /tmp/runner-manifests.yaml
+
+          test -s /tmp/runner-manifests.yaml
+
+  deploy:
+    name: Deploy runner
+    needs: runner
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.runner.outputs.deploy == 'true'
+
+    uses: ./.github/workflows/runner-deploy.yml
+    secrets: inherit

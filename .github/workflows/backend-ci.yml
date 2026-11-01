@@ -37,6 +37,7 @@ jobs:
               - '.github/workflows/backend-deploy.yml'
             deploy:
               - 'backend/**'
+              - '.github/workflows/backend-deploy.yml'
 
       - name: Set up Node.js
         if: steps.changes.outputs.test == 'true'
