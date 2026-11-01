@@ -8,6 +8,7 @@ Requires=k3s.service
 Type=simple
 User=ctf-runner
 Group=ctf-runner
+SupplementaryGroups=ulovko-build
 WorkingDirectory=/opt/ctf/runner
 EnvironmentFile=/etc/ulovko/runner.env
 ExecStart=/opt/ctf/runner/.venv/bin/uvicorn runner.main:app --host ${RUNNER_BIND_HOST} --port 8000
@@ -17,6 +18,7 @@ NoNewPrivileges=true
 ProtectHome=true
 ProtectSystem=strict
 PrivateTmp=true
+ReadWritePaths=/var/lib/ctf-runner/builds
 Environment=PYTHONDONTWRITEBYTECODE=1
 
 [Install]

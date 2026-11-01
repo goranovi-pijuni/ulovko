@@ -100,5 +100,13 @@ jobs:
           ssh -i "$HOME/.ssh/id_ed25519" \
             -o IdentitiesOnly=yes \
             -o StrictHostKeyChecking=yes \
-            "deploy@${HOST}" \
-            'sudo -n /usr/local/sbin/ctf-runner-deploy'
+            "deploy@${HOST}" 'bash -se' <<'REMOTE'
+          set -euo pipefail
+          sudo -n /usr/local/sbin/ctf-runner-deploy
+
+          # The previously installed helper updates itself only at the end.
+          # One additional run is needed on hosts provisioned before builds.
+          if ! systemctl is-active --quiet ctf-runner-builds.service; then
+            sudo -n /usr/local/sbin/ctf-runner-deploy
+          fi
+          REMOTE

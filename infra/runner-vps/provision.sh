@@ -93,6 +93,9 @@ if ! id -u ctf-runner >/dev/null 2>&1; then
   useradd --system --create-home --home-dir /var/lib/ctf-runner \
     --shell "$(command -v nologin)" ctf-runner
 fi
+# Install and activate rootless BuildKit on this host as part of provisioning.
+bash "$ROOT_DIR/scripts/install-buildkit.sh"
+
 if ! id -u deploy >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash deploy
 fi
@@ -134,6 +137,8 @@ install -m 0755 -o root -g root \
   "$ROOT_DIR/scripts/refresh-token.sh" /usr/local/libexec/ulovko/refresh-token.sh
 install -m 0644 -o root -g root \
   "$ROOT_DIR/ctf-runner.service" /etc/systemd/system/ctf-runner.service
+install -m 0644 -o root -g root \
+  "$ROOT_DIR/ctf-runner-builds.service" /etc/systemd/system/ctf-runner-builds.service
 install -m 0644 -o root -g root \
   "$ROOT_DIR/ctf-runner-token.service" /etc/systemd/system/ctf-runner-token.service
 install -m 0644 -o root -g root \
