@@ -42,6 +42,7 @@ jobs:
         if: steps.changes.outputs.test == 'true'
         uses: pnpm/action-setup@v6
         with:
+          version: 11.28.9
           package_json_file: frontend/package.json
 
       - name: Set up Node.js
