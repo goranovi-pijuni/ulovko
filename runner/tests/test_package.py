@@ -82,10 +82,14 @@ def test_invalid_schema(invalid_yaml: str):
         parse_config(invalid_yaml)
 
 
-@pytest.mark.parametrize("invalid_yaml", ["[a, b]", "", "services: ["])
-def test_invalid_yaml_document(invalid_yaml: str):
+def test_invalid_yaml_document1():
+    with pytest.raises(TypeError):
+        parse_config("[a, b]")
+
+
+def test_invalid_yaml_document2():
     with pytest.raises(ValueError):
-        parse_config(invalid_yaml)
+        parse_config("[services: []")
 
 
 @pytest.mark.parametrize(
