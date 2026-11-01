@@ -1,4 +1,4 @@
-name: CD
+name: Backend CD
 
 on:
   workflow_call:
