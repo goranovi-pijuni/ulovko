@@ -41,15 +41,19 @@ metadata:
 rules:
   - apiGroups: ["apps"]
     resources: ["deployments"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  - apiGroups: [""]
+    resources: ["pods"]
     verbs: ["get", "list"]
 
   - apiGroups: [""]
-    resources: ["pods", "services"]
-    verbs: ["get", "list"]
+    resources: ["services"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
 
   - apiGroups: ["networking.k8s.io"]
     resources: ["ingresses"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding

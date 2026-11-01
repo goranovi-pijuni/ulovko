@@ -23,6 +23,11 @@ for file in \
   "$INFRA/k8s/runner-api/access.yaml" \
   "$INFRA/scripts/deploy.sh" \
   "$INFRA/ctf-runner.service" \
+  "$INFRA/ctf-runner-builds.service" \
+  "$INFRA/ctf-buildkit.service" \
+  "$INFRA/buildkitd.toml" \
+  "$INFRA/rootlesskit.apparmor" \
+  "$INFRA/scripts/install-buildkit.sh" \
   "$INFRA/ctf-runner-token.service" \
   "$INFRA/ctf-runner-token.timer" \
   "$INFRA/scripts/refresh-token.sh"; do
@@ -42,19 +47,47 @@ if [[ ! "$TOKEN" =~ ^[A-Za-z0-9_-]{32,}$ ]]; then
 fi
 unset TOKEN
 
+# A previously provisioned VPS may not yet have BuildKit.
+# The same bootstrap is used on development and production hosts.
+if ! systemctl is-active --quiet ctf-buildkit.service; then
+  bash "$INFRA/scripts/install-buildkit.sh"
+fi
+
 # Install dependencies directly into /opt/ctf/runner/.venv.
 runuser -u deploy -- env UV_PYTHON_INSTALL_DIR=/opt/ctf/python \
   /usr/local/bin/uv sync --project "$ROOT" --locked --no-dev --no-editable
+
+# The daemon configuration is also version-controlled.
+install -d -m 0755 -o root -g root /etc/buildkit
+config_changed=0
+if ! cmp -s "$INFRA/buildkitd.toml" /etc/buildkit/ulovko-rootless.toml; then
+  config_changed=1
+fi
+install -m 0644 -o root -g root "$INFRA/buildkitd.toml" \
+  /etc/buildkit/ulovko-rootless.toml
+
+# Apply BuildKit unit changes only when its configuration changed.
+builder_changed=0
+if ! cmp -s "$INFRA/ctf-buildkit.service" /etc/systemd/system/ctf-buildkit.service; then
+  builder_changed=1
+fi
 
 # Updating RBAC is independent of restarting K3s itself.
 k3s kubectl apply -f "$INFRA/k8s/base/namespace.yaml"
 k3s kubectl apply -f "$INFRA/k8s/runner-api/access.yaml"
 install -m 0755 -o root -g root "$INFRA/scripts/refresh-token.sh" \
   /usr/local/libexec/ulovko/refresh-token.sh
-for name in ctf-runner.service ctf-runner-token.service ctf-runner-token.timer; do
+for name in ctf-runner.service ctf-runner-builds.service ctf-buildkit.service ctf-runner-token.service ctf-runner-token.timer; do
   install -m 0644 -o root -g root "$INFRA/$name" "/etc/systemd/system/$name"
 done
 systemctl daemon-reload
+systemctl enable --now ctf-buildkit.service
+if (( builder_changed || config_changed )); then
+  systemctl restart ctf-buildkit.service
+fi
+runuser -u ctf-runner -- buildctl \
+  --addr unix:///run/ulovko-buildkit/buildkitd.sock debug workers \
+  >/dev/null
 systemctl enable --now ctf-runner-token.timer
 
 # Store the runner's complete environment outside the application directory.
@@ -70,6 +103,9 @@ RUNNER_NO_RESTART=1 /usr/local/libexec/ulovko/refresh-token.sh
 systemctl enable ctf-runner.service
 systemctl restart ctf-runner.service
 systemctl is-active --quiet ctf-runner.service
+systemctl enable --now ctf-runner-builds.service
+systemctl restart ctf-runner-builds.service
+systemctl is-active --quiet ctf-runner-builds.service
 
 HOST="$(sed -n 's/^RUNNER_BIND_HOST=//p' /etc/ulovko/runner.env | head -n 1)"
 TOKEN="$(sed -n 's/^RUNNER_API_TOKEN=//p' /etc/ulovko/runner.env | head -n 1)"

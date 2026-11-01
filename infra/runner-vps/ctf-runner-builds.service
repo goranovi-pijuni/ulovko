@@ -1,0 +1,25 @@
+[Unit]
+Description=Ulovko challenge image build worker
+After=network-online.target ctf-buildkit.service
+Wants=network-online.target
+Requires=ctf-buildkit.service
+
+[Service]
+Type=simple
+User=ctf-runner
+Group=ctf-runner
+SupplementaryGroups=ulovko-build
+WorkingDirectory=/opt/ctf/runner
+ExecStart=/opt/ctf/runner/.venv/bin/python -m runner.services.build_jobs
+Environment=RUNNER_BUILDS_DIR=/var/lib/ctf-runner/builds
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+ReadWritePaths=/var/lib/ctf-runner/builds
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+[Install]
+WantedBy=multi-user.target

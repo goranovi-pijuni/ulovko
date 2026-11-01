@@ -1,0 +1,11 @@
+# Paths are relative to deploy/.
+services:
+  web1:
+    type: http
+    path: web1
+    port: 8080
+
+  test:
+    type: tcp
+    path: test
+    port: 5000
