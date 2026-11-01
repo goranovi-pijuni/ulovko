@@ -1,0 +1,81 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  frontend:
+    name: Check and build
+    runs-on: ubuntu-latest
+
+    outputs:
+      deploy: ${{ steps.changes.outputs.deploy }}
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Detect frontend changes
+        id: changes
+        uses: dorny/paths-filter@v4
+        with:
+          base: ${{ github.ref }}
+          filters: |
+            test:
+              - 'frontend/**'
+              - '.github/workflows/frontend-ci.yml'
+              - '.github/workflows/frontend-deploy.yml'
+            deploy:
+              - 'frontend/**'
+
+      - name: Set up pnpm
+        if: steps.changes.outputs.test == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+
+      - name: Set up Node.js
+        if: steps.changes.outputs.test == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        if: steps.changes.outputs.test == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        if: steps.changes.outputs.test == 'true'
+        run: pnpm typecheck
+
+      - name: Lint
+        if: steps.changes.outputs.test == 'true'
+        run: pnpm lint
+
+      - name: Build application
+        if: steps.changes.outputs.test == 'true'
+        run: pnpm build
+
+  deploy:
+    name: Deploy frontend
+    needs: frontend
+
+    if: >-
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.frontend.outputs.deploy == 'true'
+
+    uses: ./.github/workflows/frontend-deploy.yml
+    secrets: inherit
