@@ -34,17 +34,24 @@ class FakeResources:
     def __getattr__(self, name):
         if name == f"list_namespaced_{self.kind}":
             return lambda namespace, **kwargs: SimpleNamespace(
-                items=[SimpleNamespace(metadata=SimpleNamespace(name=key)) for key in self.objects]
+                items=[
+                    SimpleNamespace(metadata=SimpleNamespace(name=key))
+                    for key in self.objects
+                ]
             )
         if name == f"create_namespaced_{self.kind}":
+
             def create(namespace, body, **kwargs):
                 if self.fail_create:
                     raise ApiException(status=500, reason="Fake creation failed")
                 self.objects[body["metadata"]["name"]] = body
+
             return create
         if name == f"delete_namespaced_{self.kind}":
+
             def delete(name, namespace, **kwargs):
                 self.objects.pop(name)
+
             return delete
         raise AttributeError(name)
 
@@ -53,7 +60,7 @@ class FakeResources:
 def fake_build(monkeypatch, tmp_path: Path):
     build = tmp_path / BUILD_ID
     (build / "images").mkdir(parents=True)
-    (build / "config.yml").write_text(
+    (build / "config.yaml").write_text(
         """services:
   web1:
     type: http
@@ -98,9 +105,12 @@ def test_creates_deployments_services_ingress_and_imports(fake_build):
     http_name = deployer._name("demo-competition", "demo-challenge", "web1")
     tcp_name = deployer._name("demo-competition", "demo-challenge", "test")
     assert len(http_name) <= 63
-    assert apps.objects[http_name]["spec"]["template"]["spec"]["containers"][0][
-        "imagePullPolicy"
-    ] == "Never"
+    assert (
+        apps.objects[http_name]["spec"]["template"]["spec"]["containers"][0][
+            "imagePullPolicy"
+        ]
+        == "Never"
+    )
     assert core.objects[http_name]["spec"]["type"] == "ClusterIP"
     assert core.objects[tcp_name]["spec"]["type"] == "NodePort"
     assert "nodePort" not in core.objects[tcp_name]["spec"]["ports"][0]
@@ -114,8 +124,12 @@ def test_invalid_build_does_not_import(fake_build):
     job["status"] = "failed"
     with pytest.raises(deployer.DeploymentError, match="not successful"):
         deployer.deploy_challenge(
-            "demo-competition", "demo-challenge", BUILD_ID,
-            FakeResources("deployment"), FakeResources("service"), FakeResources("ingress"),
+            "demo-competition",
+            "demo-challenge",
+            BUILD_ID,
+            FakeResources("deployment"),
+            FakeResources("service"),
+            FakeResources("ingress"),
         )
     importer.assert_not_called()
 
