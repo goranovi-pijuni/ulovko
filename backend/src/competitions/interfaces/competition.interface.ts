@@ -1,9 +1,12 @@
+export type CompetitionStatus = 'upcoming' | 'active' | 'finished';
+
 export interface Competition {
   id: number;
   name: string;
   description: string;
-  startDate: Date;
-  endDate: Date;
+  startsAt: Date;
+  endsAt: Date;
+  status: CompetitionStatus;
   organisedBy: number;
   teamCount: number;
 }

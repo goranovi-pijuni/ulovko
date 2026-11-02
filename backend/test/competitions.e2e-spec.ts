@@ -1,11 +1,11 @@
-import { beforeAll, afterAll, describe, it } from "vitest";
-import { Test } from "@nestjs/testing";
-import type { INestApplication } from "@nestjs/common";
-import request from "supertest";
+import { beforeAll, afterAll, describe, it } from 'vitest';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import request from 'supertest';
 
-import { CompetitionsModule } from "../src/competitions/competitions.module.js";
+import { CompetitionsModule } from '../src/competitions/competitions.module.js';
 
-describe("Competitions API", () => {
+describe('Competitions API', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
@@ -14,7 +14,7 @@ describe("Competitions API", () => {
     }).compile();
 
     app = moduleRef.createNestApplication();
-    app.setGlobalPrefix("api");
+    app.setGlobalPrefix('api');
     await app.init();
   });
 
@@ -22,14 +22,14 @@ describe("Competitions API", () => {
     await app.close();
   });
 
-  it("GET /api/competitions returns 200", async () => {
+  it('GET /api/competitions returns 200', async () => {
     await request(app.getHttpServer())
-      .get("/api/competitions")
+      .get('/api/competitions')
       .expect(200)
-      .expect("Content-Type", /json/);
+      .expect('Content-Type', /json/);
   });
 
-  it("GET /api/competitions/abc returns 400", async () => {
-    await request(app.getHttpServer()).get("/api/competitions/abc").expect(400);
+  it('GET /api/competitions/abc returns 400', async () => {
+    await request(app.getHttpServer()).get('/api/competitions/abc').expect(400);
   });
 });
