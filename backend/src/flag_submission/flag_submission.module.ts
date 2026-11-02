@@ -4,6 +4,6 @@ import { FlagSubmissionService } from './flag_submission.service.js';
 
 @Module({
   controllers: [FlagSubmissionController],
-  providers: [FlagSubmissionService]
+  providers: [FlagSubmissionService],
 })
 export class FlagSubmissionModule {}
