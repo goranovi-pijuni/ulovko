@@ -14,6 +14,7 @@ class ServiceConfig(BaseModel):
     type: Literal["http", "tcp"]
     path: str
     port: int = Field(ge=1, le=65535)
+    public: bool = True
 
 
 class ChallengeConfig(BaseModel):

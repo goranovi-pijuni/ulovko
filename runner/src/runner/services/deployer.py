@@ -1,6 +1,5 @@
 import hashlib
 import logging
-import os
 import subprocess
 from typing import Any
 
@@ -12,7 +11,6 @@ from runner.services.package import ChallengeConfig, load_local_config
 
 logger = logging.getLogger(__name__)
 
-NAMESPACE = os.getenv("RUNNER_CHALLENGE_NAMESPACE", "ctf-demo")
 MANAGED_BY = "app.kubernetes.io/managed-by"
 COMPETITION = "ulovko.fun/competition-id"
 TASK = "ulovko.fun/task-id"
@@ -37,15 +35,16 @@ def _hash(value: str, length: int = 12) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()[:length]
 
 
+def challenge_namespace(competition_id: str, task_id: str) -> str:
+    """A stable, independent Kubernetes namespace for each task."""
+    return f"ctf-{_hash(f'{competition_id}/{task_id}', 16)}"
+
+
 def _name(competition_id: str, task_id: str, service: str) -> str:
     """Stable DNS-compatible name (less than 63 characters)."""
     return (
         f"u-{_hash(f'{competition_id}/{task_id}')}-{service[:24]}-{_hash(service, 6)}"
     )
-
-
-def _selector(competition_id: str, task_id: str) -> str:
-    return f"{MANAGED_BY}=ulovko-runner,{COMPETITION}={competition_id},{TASK}={task_id}"
 
 
 def _labels(
@@ -65,8 +64,13 @@ def _image(build_id: str, service: str) -> str:
     return f"ulovko.local/challenges/{build_id}/{service}:v1"
 
 
-def _deployment(name: str, labels: dict[str, str], image: str, port: int) -> dict:
+def _deployment(
+    name: str, labels: dict[str, str], image: str, port: int, public_tcp: bool
+) -> dict:
     selector = {"app": name}
+    pod_labels = {**labels, **selector}
+    if public_tcp:
+        pod_labels["ulovko.fun/public-tcp"] = "true"
     return {
         "apiVersion": "apps/v1",
         "kind": "Deployment",
@@ -76,7 +80,7 @@ def _deployment(name: str, labels: dict[str, str], image: str, port: int) -> dic
             "strategy": {"type": "Recreate"},
             "selector": {"matchLabels": selector},
             "template": {
-                "metadata": {"labels": {**labels, **selector}},
+                "metadata": {"labels": pod_labels},
                 "spec": {
                     "automountServiceAccountToken": False,
                     "securityContext": {
@@ -112,18 +116,25 @@ def _deployment(name: str, labels: dict[str, str], image: str, port: int) -> dic
     }
 
 
-def _service(name: str, labels: dict[str, str], kind: str, port: int) -> dict:
+def _service(
+    name: str,
+    service_name: str,
+    labels: dict[str, str],
+    kind: str,
+    port: int,
+    public: bool,
+) -> dict:
     return {
         "apiVersion": "v1",
         "kind": "Service",
-        "metadata": {"name": name, "labels": labels},
+        "metadata": {"name": service_name, "labels": labels},
         "spec": {
-            "type": "ClusterIP" if kind == "http" else "NodePort",
+            "type": "NodePort" if public and kind == "tcp" else "ClusterIP",
             "selector": {"app": name},
             "ports": [
                 {
                     "name": "http" if kind == "http" else "tcp",
-                    "port": 80 if kind == "http" else port,
+                    "port": port,
                     "targetPort": port,
                     "protocol": "TCP",
                 }
@@ -132,7 +143,7 @@ def _service(name: str, labels: dict[str, str], kind: str, port: int) -> dict:
     }
 
 
-def _ingress(name: str, labels: dict[str, str]) -> dict:
+def _ingress(name: str, service_name: str, labels: dict[str, str], port: int) -> dict:
     # Assumes a wildcard DNS record *.chal.ulovko.fun -> K3s VPS.
     return {
         "apiVersion": "networking.k8s.io/v1",
@@ -149,7 +160,10 @@ def _ingress(name: str, labels: dict[str, str]) -> dict:
                                 "path": "/",
                                 "pathType": "Prefix",
                                 "backend": {
-                                    "service": {"name": name, "port": {"number": 80}}
+                                    "service": {
+                                        "name": service_name,
+                                        "port": {"number": port},
+                                    }
                                 },
                             }
                         ]
@@ -186,6 +200,70 @@ def _validate_build(
     return config
 
 
+def _namespace_body(competition_id: str, task_id: str) -> dict:
+    return {
+        "apiVersion": "v1",
+        "kind": "Namespace",
+        "metadata": {
+            "name": challenge_namespace(competition_id, task_id),
+            "labels": {
+                MANAGED_BY: "ulovko-runner",
+                COMPETITION: competition_id,
+                TASK: task_id,
+                "pod-security.kubernetes.io/enforce": "restricted",
+            },
+        },
+    }
+
+
+def _isolation_policy() -> dict:
+    """Allow sibling pods, CoreDNS, and inbound traffic from Traefik's namespace."""
+    system = {
+        "namespaceSelector": {
+            "matchLabels": {"kubernetes.io/metadata.name": "kube-system"}
+        }
+    }
+    dns = {**system, "podSelector": {"matchLabels": {"k8s-app": "kube-dns"}}}
+    return {
+        "apiVersion": "networking.k8s.io/v1",
+        "kind": "NetworkPolicy",
+        "metadata": {"name": "challenge-isolation"},
+        "spec": {
+            "podSelector": {},
+            "policyTypes": ["Ingress", "Egress"],
+            "ingress": [
+                {"from": [{"podSelector": {}}]},
+                {"from": [system]},
+            ],
+            "egress": [
+                {"to": [{"podSelector": {}}]},
+                {
+                    "to": [dns],
+                    "ports": [
+                        {"protocol": "UDP", "port": 53},
+                        {"protocol": "TCP", "port": 53},
+                    ],
+                },
+            ],
+        },
+    }
+
+
+def _public_tcp_policy() -> dict:
+    # Public NodePorts must accept external clients. Other challenge Pods are
+    # prevented from initiating cross-challenge connections by egress policy.
+    return {
+        "apiVersion": "networking.k8s.io/v1",
+        "kind": "NetworkPolicy",
+        "metadata": {"name": "public-tcp"},
+        "spec": {
+            "podSelector": {"matchLabels": {"ulovko.fun/public-tcp": "true"}},
+            "policyTypes": ["Ingress"],
+            "ingress": [{}],
+        },
+    }
+
+
 def deploy_challenge(
     competition_id: str,
     task_id: str,
@@ -194,16 +272,17 @@ def deploy_challenge(
     core: client.CoreV1Api,
     networking: client.NetworkingV1Api,
 ) -> dict[str, Any]:
-    """Import all built images and create one workload per configured service."""
+    """Import built images and deploy their services into a task namespace."""
     config = _validate_build(competition_id, task_id, build_id)
-    selector = _selector(competition_id, task_id)
-    if apps.list_namespaced_deployment(
-        NAMESPACE, label_selector=selector, _request_timeout=5
-    ).items:
+    namespace = challenge_namespace(competition_id, task_id)
+    try:
+        core.read_namespace(namespace, _request_timeout=5)
+    except ApiException as exc:
+        if exc.status != 404:
+            raise
+    else:
         raise DeploymentConflict("Challenge is already deployed")
 
-    # This is a fixed, root-owned helper. No arbitrary command or path comes
-    # from the API request, and FastAPI does not access containerd directly.
     for name in config.services:
         try:
             subprocess.run(
@@ -221,42 +300,67 @@ def deploy_challenge(
             logger.exception("Failed importing %s from build %s", name, build_id)
             raise ImageImportError(f"Failed to import image for {name}") from exc
 
-    created: list[tuple[Any, str]] = []
+    created_namespace = False
     result: list[dict[str, str]] = []
     try:
+        core.create_namespace(
+            _namespace_body(competition_id, task_id), _request_timeout=15
+        )
+        created_namespace = True
+
+        # Policies come before workloads, so pods are isolated on first start.
+        networking.create_namespaced_network_policy(
+            namespace, _isolation_policy(), _request_timeout=15
+        )
+        if any(
+            service.public and service.type == "tcp"
+            for service in config.services.values()
+        ):
+            networking.create_namespaced_network_policy(
+                namespace, _public_tcp_policy(), _request_timeout=15
+            )
+
         for name, service in config.services.items():
             resource_name = _name(competition_id, task_id, name)
             labels = _labels(competition_id, task_id, name, build_id)
             image = _image(build_id, name)
 
             apps.create_namespaced_deployment(
-                NAMESPACE,
-                _deployment(resource_name, labels, image, service.port),
+                namespace,
+                _deployment(
+                    resource_name,
+                    labels,
+                    image,
+                    service.port,
+                    service.public and service.type == "tcp",
+                ),
                 _request_timeout=15,
             )
-            created.append((apps.delete_namespaced_deployment, resource_name))
-
             core.create_namespaced_service(
-                NAMESPACE,
-                _service(resource_name, labels, service.type, service.port),
+                namespace,
+                _service(
+                    resource_name,
+                    name,
+                    labels,
+                    service.type,
+                    service.port,
+                    service.public,
+                ),
                 _request_timeout=15,
             )
-            created.append((core.delete_namespaced_service, resource_name))
-
-            if service.type == "http":
+            if service.public and service.type == "http":
                 networking.create_namespaced_ingress(
-                    NAMESPACE, _ingress(resource_name, labels), _request_timeout=15
+                    namespace,
+                    _ingress(resource_name, name, labels, service.port),
+                    _request_timeout=15,
                 )
-                created.append((networking.delete_namespaced_ingress, resource_name))
-
             result.append({"name": name, "image": image})
     except ApiException:
-        # Roll back resources created in this call; imported images remain cached.
-        for delete, resource_name in reversed(created):
+        if created_namespace:
             try:
-                delete(resource_name, NAMESPACE, _request_timeout=10)
+                core.delete_namespace(namespace, _request_timeout=10)
             except ApiException:
-                logger.exception("Could not roll back %s", resource_name)
+                logger.exception("Could not roll back namespace %s", namespace)
         raise
 
     return {
@@ -271,29 +375,24 @@ def deploy_challenge(
 def delete_challenge(
     competition_id: str,
     task_id: str,
-    apps: client.AppsV1Api,
     core: client.CoreV1Api,
-    networking: client.NetworkingV1Api,
 ) -> dict[str, int]:
-    """Remove only resources created by this deployer, not unrelated demos."""
-    selector = _selector(competition_id, task_id)
-    expected_prefix = f"u-{_hash(f'{competition_id}/{task_id}')}-"
-    resources = (
-        (
-            networking.list_namespaced_ingress,
-            networking.delete_namespaced_ingress,
-        ),
-        (core.list_namespaced_service, core.delete_namespaced_service),
-        (apps.list_namespaced_deployment, apps.delete_namespaced_deployment),
-    )
-    count = 0
-    for listing, deleting in resources:
-        for item in listing(
-            NAMESPACE, label_selector=selector, _request_timeout=5
-        ).items:
-            name = item.metadata.name if item.metadata else ""
-            if not name.startswith(expected_prefix):
-                continue
-            deleting(name, NAMESPACE, _request_timeout=10)
-            count += 1
-    return {"deleted": count}
+    """Deleting a challenge namespace removes all resources within it."""
+    namespace = challenge_namespace(competition_id, task_id)
+    try:
+        resource = core.read_namespace(namespace, _request_timeout=5)
+    except ApiException as exc:
+        if exc.status == 404:
+            return {"deleted": 0}
+        raise
+
+    labels = (resource.metadata.labels or {}) if resource.metadata else {}
+    if (labels.get(MANAGED_BY), labels.get(COMPETITION), labels.get(TASK)) != (
+        "ulovko-runner",
+        competition_id,
+        task_id,
+    ):
+        return {"deleted": 0}
+
+    core.delete_namespace(namespace, _request_timeout=10)
+    return {"deleted": 1}

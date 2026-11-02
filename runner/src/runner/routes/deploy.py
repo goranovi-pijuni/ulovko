@@ -60,12 +60,10 @@ def deploy(
 def undeploy(
     competition_id: CompetitionId,
     task_id: TaskId,
-    apps: Annotated[client.AppsV1Api, Depends(get_app)],
     core: Annotated[client.CoreV1Api, Depends(get_k8s)],
-    networking: Annotated[client.NetworkingV1Api, Depends(get_networking)],
 ):
     try:
-        result = delete_challenge(competition_id, task_id, apps, core, networking)
+        result = delete_challenge(competition_id, task_id, core)
     except ApiException as exc:
         raise HTTPException(
             status_code=502, detail="Kubernetes rejected deletion"

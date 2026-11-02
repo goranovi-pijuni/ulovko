@@ -1,8 +1,8 @@
 # Demonstracijski CTF zadatak
 
-Ovaj zadatak služi za provjeru izgradnje i pokretanja CTF servisa.
+Ovaj zadatak služi za provjeru izgradnje, pokretanja i komunikacije između CTF servisa u istom Kubernetes namespaceu.
 
-Dostupna su dva servisa:
+- **web1 (javni HTTP, port 8080):** `/health` vraća `ok`, a početna stranica uspostavlja vezu prema privatnom servisu `test:5000` i prikazuje njegov pozdrav i echo odgovor.
+- **test (privatni TCP, port 5000):** šalje `CTF TCP demo OK` i vraća primljene podatke; nema javni NodePort ni Ingress.
 
-- **web1 (HTTP):** početna stranica vraća `CTF HTTP demo OK`, a `/health` vraća `ok`.
-- **test (TCP):** nakon spajanja šalje `CTF TCP demo OK`, a zatim vraća primljene podatke (echo).
+Otvorite javni URL za `web1` i potražite retke `web1 -> test:5000` i `test echoed: hello from web1`. Tako se provjerava da `web1` može pristupiti privatnom servisu po simboličkom imenu `test`.
