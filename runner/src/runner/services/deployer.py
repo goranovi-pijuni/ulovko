@@ -168,7 +168,7 @@ def _validate_build(
 
     build_root = builds_root() / build_id
     try:
-        config = load_local_config(build_root / "config.yml")
+        config = load_local_config(build_root / "config.yaml")
     except (ValueError, OSError) as exc:
         raise DeploymentError("Build configuration is missing or invalid") from exc
     expected = {name: f"{name}.oci.tar" for name in config.services}

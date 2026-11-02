@@ -39,7 +39,7 @@ Svako natjecanje ima vlastiti R2 bucket nazvan prema `competition_id`, a svaki z
 ```text
 R2 bucket: demo-competition
 └── demo-challenge/
-    ├── config.yml
+    ├── config.yaml
     └── deploy.zip
 ```
 
@@ -55,7 +55,7 @@ deploy/
     └── server.py
 ```
 
-Primjer `config.yml`:
+Primjer `config.yaml`:
 
 ```yaml
 services:
@@ -72,8 +72,6 @@ services:
 
 `type` je `http` ili `tcp`, `path` je putanja build konteksta relativna u odnosu na `deploy/`, a `port` je unutarnji port kontejnera. Svaki servis mora imati vlastiti Dockerfile; runner odbija nepoznata polja, neispravne portove, izlazak iz dozvoljenih putanja i nepodržane ZIP zapise. **Manifest ne sadrži podatke o flagovima** jer njima upravlja aplikacijski backend, a ne runner.
 
-Lokalni primjer nalazi se u `examples/demo-challenge/` i koristi naziv `config.yaml`. Pri prijenosu na R2 isti se sadržaj sprema pod ključem `<task_id>/config.yml`, jer trenutačni R2 dohvat očekuje upravo taj naziv. Direktorij `public/` iz lokalnog primjera namijenjen je igračima i ne uključuje se u Docker build kontekste ni u R2 `deploy.zip`. Upute za primjer nalaze se u [examples/README.md](examples/README.md).
-
 ## Izgradnja slika
 
 Build API ne izvodi Dockerfileove u FastAPI procesu. `POST /builds` zapisuje posao s jedinstvenim `build_id`, a zasebni proces `runner.services.build_jobs` preuzima poslove redom, dohvaća R2 objekte, validira konfiguraciju i pokreće rootless BuildKit za svaki servis. Za izgradnju se ne koristi Docker Engine ni `sudo buildctl`.
@@ -83,7 +81,7 @@ Stanja posla su `queued`, `running`, `succeeded` i `failed`. Red poslova i rezul
 ```text
 /var/lib/ctf-runner/builds/<build_id>/
 ├── job.json
-├── config.yml
+├── config.yaml
 └── images/
     ├── web1.oci.tar
     ├── web1.log
@@ -92,7 +90,7 @@ Stanja posla su `queued`, `running`, `succeeded` i `failed`. Red poslova i rezul
     └── images.json
 ```
 
-Datoteka `config.yml` i OCI arhive ostaju dostupne nakon uspješne izgradnje; privremeno raspakirani izvori brišu se nakon obrade. `images.json` povezuje imena servisa s nazivima arhiva. Izgradnja sama po sebi ne stvara Kubernetes resurse; arhive se uvoze tek na zahtjev `POST /challenges/{competition_id}/{task_id}/deploy`.
+Datoteka `config.yaml` i OCI arhive ostaju dostupne nakon uspješne izgradnje; privremeno raspakirani izvori brišu se nakon obrade. `images.json` povezuje imena servisa s nazivima arhiva. Izgradnja sama po sebi ne stvara Kubernetes resurse; arhive se uvoze tek na zahtjev `POST /challenges/{competition_id}/{task_id}/deploy`.
 
 ## HTTP API
 
@@ -138,7 +136,7 @@ Za registraciju ruta potrebno je u `runner/src/runner/main.py` dodati `from runn
 
 ## Objava izazova u K3s
 
-Nakon uspješnog `POST /builds` pozvati `POST /challenges/{competition_id}/{task_id}/deploy` s odgovarajućim `build_id`. Runner učitava spremljeni `config.yml`, uvozi OCI arhive u K3s containerd i stvara po jedan Deployment i Service za svaki servis; HTTP servis dobiva Ingress na `https://` ili `http://<generirano-ime>.chal.ulovko.fun` (stvarna HTTPS konfiguracija nije uključena), a TCP servis dobiva automatski dodijeljen NodePort. Ovo je jednostavna objava na jednom K3s čvoru, bez privatne mreže među izazovima i bez automatskog ažuriranja već objavljenog zadatka.
+Nakon uspješnog `POST /builds` pozvati `POST /challenges/{competition_id}/{task_id}/deploy` s odgovarajućim `build_id`. Runner učitava spremljeni `config.yaml`, uvozi OCI arhive u K3s containerd i stvara po jedan Deployment i Service za svaki servis; HTTP servis dobiva Ingress na `https://` ili `http://<generirano-ime>.chal.ulovko.fun` (stvarna HTTPS konfiguracija nije uključena), a TCP servis dobiva automatski dodijeljen NodePort. Ovo je jednostavna objava na jednom K3s čvoru, bez privatne mreže među izazovima i bez automatskog ažuriranja već objavljenog zadatka.
 
 ```bash
 curl -s -H "Authorization: Bearer $RUNNER_API_TOKEN" \
