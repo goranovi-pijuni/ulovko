@@ -68,9 +68,10 @@ services:
     type: tcp
     path: test
     port: 5000
+    public: false
 ```
 
-`type` je `http` ili `tcp`, `path` je putanja build konteksta relativna u odnosu na `deploy/`, a `port` je unutarnji port kontejnera. Svaki servis mora imati vlastiti Dockerfile; runner odbija nepoznata polja, neispravne portove, izlazak iz dozvoljenih putanja i nepodržane ZIP zapise. **Manifest ne sadrži podatke o flagovima** jer njima upravlja aplikacijski backend, a ne runner.
+`type` je `http` ili `tcp`, `path` je putanja build konteksta relativna u odnosu na `deploy/`, a `port` je unutarnji port kontejnera. Neobavezni `public` zadano je `true`; ako je `false`, servis dobiva samo interni ClusterIP bez javnog TCP NodePorta ili HTTP Ingressa. Svaki servis mora imati vlastiti Dockerfile; runner odbija nepoznata polja, neispravne portove, izlazak iz dozvoljenih putanja i nepodržane ZIP zapise. **Manifest ne sadrži podatke o flagovima** jer njima upravlja aplikacijski backend, a ne runner.
 
 ## Izgradnja slika
 
@@ -136,28 +137,32 @@ Za registraciju ruta potrebno je u `runner/src/runner/main.py` dodati `from runn
 
 ## Objava izazova u K3s
 
-Nakon uspješnog `POST /builds` pozvati `POST /challenges/{competition_id}/{task_id}/deploy` s odgovarajućim `build_id`. Runner učitava spremljeni `config.yaml`, uvozi OCI arhive u K3s containerd i stvara po jedan Deployment i Service za svaki servis; HTTP servis dobiva Ingress na `https://` ili `http://<generirano-ime>.chal.ulovko.fun` (stvarna HTTPS konfiguracija nije uključena), a TCP servis dobiva automatski dodijeljen NodePort. Ovo je jednostavna objava na jednom K3s čvoru, bez privatne mreže među izazovima i bez automatskog ažuriranja već objavljenog zadatka.
+Nakon uspješnog `POST /builds` pozvati `POST /challenges/{competition_id}/{task_id}/deploy` s odgovarajućim `build_id`. Runner učitava spremljeni `config.yaml`, uvozi OCI arhive u K3s containerd, stvara zaseban Kubernetes namespace za svaki zadatak te unutar njega podiže po jedan Deployment i Service za svaki servis. Samo servisi s `public: true` dobivaju javnu rutu: HTTP Ingress ili TCP NodePort; `public: false` ostaje dostupan samo unutar namespacea preko svojeg Kubernetes Service imena. Postojeća javna usmjeravanja kroz Caddy i Traefik ostaju nepromijenjena.
+
+Kubernetes Service nosi točno ime iz `config.yaml`, a njegov port odgovara vrijednosti `port`. Primjerice, ako su definirani servisi `frontend` na portu 8080 i `backend` na portu 5000, `frontend` može pristupiti servisu `backend:5000` ili `http://backend:5000` ako je riječ o HTTP poslužitelju. Isti naziv `backend` može se koristiti u drugom zadatku jer svaki zadatak ima vlastiti namespace. Promjena formata zadatka nije potrebna.
+
+Runner prvo postavlja NetworkPolicy: dopušten je promet među podovima istog zadatka i DNS upiti prema CoreDNS-u, dok se ostali izlazni pod promet blokira. Ulazni promet prema HTTP servisima dopušten je iz `kube-system` namespacea zbog Traefika, a javni TCP servisi nastavljaju primati vanjske veze preko NodePorta. Takva pravila sprječavaju izravno uspostavljanje veza između različitih zadataka, ali ne predstavljaju potpunu sigurnosnu izolaciju hosta ni zamjenu za dodatno ograničavanje neprijateljskih kontejnera.
 
 ```bash
 curl -s -H "Authorization: Bearer $RUNNER_API_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"build_id":"BUILD_ID"}' \
-  http://127.0.0.1:8000/challenges/demo-competition/demo-challenge/deploy | jq
+  https://chal.ulovko.fun/challenges/demo-competition/demo-challenge/deploy | jq
 
 curl -s -H "Authorization: Bearer $RUNNER_API_TOKEN" \
-  http://127.0.0.1:8000/challenges/demo-competition/demo-challenge | jq
+  https://chal.ulovko.fun/challenges/demo-competition/demo-challenge | jq
 ```
 
-Ako je zadatak već objavljen, nova objava vraća HTTP 409; za promjenu slike prvo ga ukloniti, zatim ponovno objaviti. Uklanjanje ne briše spremljene buildove ni slike iz containerd cachea.
+Ako je zadatak već objavljen, nova objava vraća HTTP 409. Za promjenu slike prvo ga treba ukloniti, a zatim ponovno objaviti s novim build ID-jem. Uklanjanje briše namespace i pripadajuće resurse, ali ne briše spremljene buildove ni OCI slike iz containerd cachea.
 
 ```bash
 curl -s -X DELETE -H "Authorization: Bearer $RUNNER_API_TOKEN" \
-  http://127.0.0.1:8000/challenges/demo-competition/demo-challenge | jq
+  https://chal.ulovko.fun/challenges/demo-competition/demo-challenge | jq
 ```
 
-Za uvoz slika build mora biti spremljen u `/var/lib/ctf-runner/builds`, jer privilegirana skripta namjerno koristi samo tu fiksnu lokaciju; raniji lokalni primjer s `RUNNER_BUILDS_DIR=$HOME/.local/state/ulovko/builds` služi samo za testiranje izgradnje, ne i Kubernetes objave. Za testiranje objave koristi se provisionirani servis i isti direktorij buildova kao na VPS-u.
+Za uvoz slika build mora biti spremljen u `/var/lib/ctf-runner/builds`, jer privilegirana skripta namjerno koristi samo tu fiksnu lokaciju. Za testiranje objave koristi se provisionirani servis i isti direktorij buildova kao na VPS-u.
 
-Import slika koristi root-owned pomoćnu skriptu koju smije pokrenuti samo korisnik `ctf-runner` putem ograničenog `sudoers` pravila. K3s API se i dalje koristi isključivo kroz ograničeni ServiceAccount. Ova jednostavna verzija namijenjena je pouzdanim demo zadacima; prije dopuštanja proizvoljnih organizatorskih kontejnera nužni su jača izolacija i sigurnosna provjera privilegija i mreže.
+Import slika koristi root-owned pomoćnu skriptu koju smije pokrenuti samo korisnik `ctf-runner` preko ograničenog `sudoers` pravila. K3s API koristi zaseban ServiceAccount. Korištenje vlastitog namespacea po zadatku zahtijeva cluster-scoped RBAC ovlasti za stvaranje i brisanje namespaceova; to nije potpuna sigurnosna granica za proizvoljne organizatorske kontejnere.
 
 ## Lokalni razvoj
 
@@ -201,8 +206,8 @@ U trećem terminalu poslati `POST /builds` iz gornjeg primjera. Ako posao ostaje
 
 ## Konfiguracija i ograničenja
 
-U produkciji `ctf-runner.service` i `ctf-runner-builds.service` čitaju istu datoteku `/etc/ulovko/runner.env`, koju generira Runner CD iz GitHub Actions secrets i variables. `RUNNER_BUILDS_DIR` definira direktorij stanja buildova, `KUBECONFIG` pristup Kubernetes API-ju, a `RUNNER_CHALLENGE_NAMESPACE` namespace za čitanje radnih opterećenja. Postavke `RUNNER_HTTP_SCHEME` i `RUNNER_TCP_HOST` utječu na prikaz javnih krajnjih točaka. Instalacija, ovlasti i rotacija Kubernetes tokena obrađene su u [infra/runner-vps/README.md](../infra/runner-vps/README.md).
+U produkciji `ctf-runner.service` i `ctf-runner-builds.service` čitaju istu datoteku `/etc/ulovko/runner.env`, koju generira Runner CD iz GitHub Actions secrets i variables. `RUNNER_BUILDS_DIR` definira direktorij stanja buildova, `KUBECONFIG` pristup Kubernetes API-ju, a Postavke `RUNNER_HTTP_SCHEME` i `RUNNER_TCP_HOST` utječu na prikaz javnih krajnjih točaka. Instalacija, ovlasti i rotacija Kubernetes tokena obrađene su u [infra/runner-vps/README.md](../infra/runner-vps/README.md).
 
 R2 arhive ograničene su maksimalnom veličinom i brojem datoteka, ali rootless BuildKit sam po sebi nije potpuna izolacija za neprijateljske Dockerfileove. Prije omogućavanja proizvoljnih organizatorskih uploadova potrebni su dodatna izolacija, ograničenje resursa i kontrola mrežnog pristupa. Ponovno pokretanje prekinutog posla trenutačno ponovno preuzima aktualne R2 objekte, pa za reproduktivnost izgradnji kasnije treba pohraniti njihove digest vrijednosti ili nepromjenjive verzije.
 
-Prije produkcijskog izvršavanja neprijateljskih kontejnera potrebna je mrežna izolacija, sigurnija granica za import slika i upravljanje životnim ciklusom po natjecanjima.
+Mrežna pravila ograničavaju komunikaciju među zadacima, ali za produkcijsko izvršavanje neprijateljskih kontejnera i dalje su potrebni provjera sigurnosti hosta i sigurnija granica za uvoz slika.

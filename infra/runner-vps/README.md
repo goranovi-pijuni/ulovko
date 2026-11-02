@@ -123,7 +123,7 @@ Ako je VPS ranije provisioniran starijom verzijom pomoćnih skripti, ponovno pok
 | `/etc/ulovko/runner.kubeconfig` | Ograničene Kubernetes vjerodajnice za `runner-api` ServiceAccount |
 | `/var/lib/ctf-runner/builds` | Trajna stanja poslova, zapisnici i OCI arhive |
 
-Runner koristi Kubernetes ServiceAccount `runner-system/runner-api` s RBAC pravilima iz `k8s/runner-api/access.yaml` (čitanje) i `k8s/runner-api/deploy-access.yaml` (stvaranje i brisanje Deploymenata, Servicea i Ingressa u `ctf-demo`). Kubeconfig se generira na runner VPS-u, ne šalje se u GitHub Secrets i obnavlja se pri objavi te periodično kroz systemd timer. Obnova tokena može ponovno pokrenuti FastAPI, ali ne i neovisni build worker.
+Runner koristi Kubernetes ServiceAccount `runner-system/runner-api` s ClusterRole pravilima iz `k8s/runner-api/access.yaml` (čitanje resursa) i `k8s/runner-api/deploy-access.yaml` (stvaranje/brisanje namespaceova i stvaranje Deploymenta, Servicea, Ingressa i NetworkPolicyja). Svaki objavljeni zadatak dobiva namespace `ctf-<hash>` s vlastitim mrežnim pravilima, dok `ctf-demo` služi isključivo za ručne demonstracijske manifestacije. Kubeconfig se generira na runner VPS-u, ne šalje se u GitHub Secrets i obnavlja se pri objavi te periodično kroz systemd timer. Obnova tokena može ponovno pokrenuti FastAPI, ali ne i neovisni build worker.
 
 Zaštićeni `/etc/ulovko/runner.env` generira Runner CD iz GitHub postavki. Obuhvaća API autentifikaciju, R2 vjerodajnice, mrežne postavke i `KUBECONFIG`; nove varijable treba dodavati u isti mehanizam, a ne ručno na VPS-u. Promjena samog GitHub secreta ne pokreće objavu. Kod promjene zajedničkog `RUNNER_API_TOKEN` potrebno je pokrenuti i Runner CD i Backend CD, uz moguć kratki prekid komunikacije dok se obje strane ne ažuriraju.
 
@@ -160,7 +160,8 @@ sudo journalctl -u ctf-runner.service -n 100 --no-pager
 sudo journalctl -u ctf-runner-builds.service -n 100 --no-pager
 sudo journalctl -u ctf-buildkit.service -n 100 --no-pager
 sudo k3s kubectl get nodes -o wide
-sudo k3s kubectl -n ctf-demo get deployments,pods,services,ingresses
+sudo k3s kubectl get namespaces -l app.kubernetes.io/managed-by=ulovko-runner
+sudo k3s kubectl get deployments,pods,services,ingresses,networkpolicies -A
 ```
 
 Kubernetes API na portu 6443 ne mora biti dostupan s interneta. Vanjski DNS, firewall i privatna veza između VPS-ova konfiguriraju se odvojeno; runner API treba biti dostupan samo ovlaštenom backendu. Grana `main`, GitHub production okruženje i privilegirani deployment workflow moraju biti zaštićeni jer mogu mijenjati RBAC i sistemske servise.

@@ -18,7 +18,7 @@ demo-challenge/
         └── server.py
 ```
 
-`config.yaml` opisuje HTTP servis `web1` na portu 8080 i TCP servis `test` na portu 5000. Svaki servis ima vlastiti build kontekst unutar `deploy/`, pa datoteke drugog servisa nisu dio njegove izgradnje. `public/` je namijenjen igračima; runner njime ne upravlja i ne uključuje ga u slike. Podaci o flagovima ne nalaze se u runner konfiguraciji.
+`config.yaml` opisuje javni HTTP servis `web1` na portu 8080 i privatni TCP servis `test` na portu 5000 (`public: false`). Privatni servis nema NodePort ni Ingress, ali je dostupan ostalim servisima unutar istog zadatka pod DNS imenom `test:5000`. Otvaranjem javne stranice servisa `web1` vidi se pozdrav i odgovor (echo) dobiven od privatnog servisa `test`. Svaki servis ima vlastiti build kontekst unutar `deploy/`, pa datoteke drugog servisa nisu dio njegove izgradnje. `public/` je namijenjen igračima; runner njime ne upravlja i ne uključuje ga u slike. Podaci o flagovima ne nalaze se u runner konfiguraciji.
 
 ## Pokretanje bez kontejnera
 
@@ -32,7 +32,6 @@ U drugom terminalu provjeriti:
 
 ```bash
 curl -f http://127.0.0.1:8080/health
-curl -f http://127.0.0.1:8080/
 ```
 
 TCP servis pokrenuti zasebno:
@@ -41,7 +40,7 @@ TCP servis pokrenuti zasebno:
 python3 runner/examples/demo-challenge/deploy/test/server.py
 ```
 
-Na port 5000 može se spojiti pomoću `nc`.
+Na port 5000 može se spojiti pomoću `nc`. Izvan Kubernetes namespacea lokalni `web1` neće moći razriješiti ime `test`; za provjeru međusobne komunikacije objavite oba servisa u K3s-u i otvorite javni URL servisa `web1`.
 
 ## Izgradnja i prijenos na R2
 
