@@ -21,6 +21,8 @@ for file in \
   "$ENV_SRC" \
   "$INFRA/k8s/base/namespace.yaml" \
   "$INFRA/k8s/runner-api/access.yaml" \
+  "$INFRA/k8s/runner-api/deploy-access.yaml" \
+  "$INFRA/scripts/import-image.sh" \
   "$INFRA/scripts/deploy.sh" \
   "$INFRA/ctf-runner.service" \
   "$INFRA/ctf-runner-builds.service" \
@@ -75,6 +77,14 @@ fi
 # Updating RBAC is independent of restarting K3s itself.
 k3s kubectl apply -f "$INFRA/k8s/base/namespace.yaml"
 k3s kubectl apply -f "$INFRA/k8s/runner-api/access.yaml"
+k3s kubectl apply -f "$INFRA/k8s/runner-api/deploy-access.yaml"
+install -m 0755 -o root -g root "$INFRA/scripts/import-image.sh" \
+  /usr/local/libexec/ulovko/import-image.sh
+printf '%s\n' \
+  'ctf-runner ALL=(root) NOPASSWD: /usr/local/libexec/ulovko/import-image.sh *' \
+  > /etc/sudoers.d/ctf-runner-image-import
+chmod 0440 /etc/sudoers.d/ctf-runner-image-import
+visudo -cf /etc/sudoers.d/ctf-runner-image-import
 install -m 0755 -o root -g root "$INFRA/scripts/refresh-token.sh" \
   /usr/local/libexec/ulovko/refresh-token.sh
 for name in ctf-runner.service ctf-runner-builds.service ctf-buildkit.service ctf-runner-token.service ctf-runner-token.timer; do

@@ -1,9 +1,3 @@
-"""Build a validated challenge package into OCI archives using rootless BuildKit.
-
-Builds images only: no Kubernetes deployment and no Docker daemon required.
-The daemon is available on the same group-protected Unix socket on all hosts.
-"""
-
 import argparse
 import json
 import subprocess
@@ -57,13 +51,20 @@ def build_challenge(
             log_path = output_dir / f"{name}.log"
 
             command = [
-                "buildctl", "--addr", BUILDKIT_ADDRESS,
+                "buildctl",
+                "--addr",
+                BUILDKIT_ADDRESS,
                 "build",
-                "--frontend", "dockerfile.v0",
-                "--local", f"context={context}",
-                "--local", f"dockerfile={context}",
-                "--progress", "plain",
-                "--output", "type=oci",
+                "--frontend",
+                "dockerfile.v0",
+                "--local",
+                f"context={context}",
+                "--local",
+                f"dockerfile={context}",
+                "--progress",
+                "plain",
+                "--output",
+                "type=oci",
             ]
 
             try:
@@ -107,7 +108,8 @@ def build_challenge(
             json.dumps(
                 {name: archive.name for name, archive in images.items()},
                 indent=2,
-            ) + "\n",
+            )
+            + "\n",
             encoding="utf-8",
         )
         return images
@@ -121,7 +123,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Build an Ulovko challenge")
     parser.add_argument("package_root", type=Path)
     parser.add_argument(
-        "--output-root", type=Path, default=Path("/tmp/ulovko-builds"),
+        "--output-root",
+        type=Path,
+        default=Path("/tmp/ulovko-builds"),
         help="Directory holding separate per-build results",
     )
     args = parser.parse_args()

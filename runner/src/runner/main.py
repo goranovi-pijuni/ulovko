@@ -6,7 +6,7 @@ from fastapi.security import HTTPBearer
 from kubernetes import client, config
 
 from runner.auth import authenticate
-from runner.routes import builds, challenges, nodes, workloads
+from runner.routes import builds, challenges, deploy, nodes, workloads
 
 TOKEN = os.environ["RUNNER_API_TOKEN"]
 security = HTTPBearer()
@@ -37,3 +37,4 @@ app.include_router(nodes.router, dependencies=[Depends(authenticate)])
 app.include_router(workloads.router, dependencies=[Depends(authenticate)])
 app.include_router(challenges.router, dependencies=[Depends(authenticate)])
 app.include_router(builds.router, dependencies=[Depends(authenticate)])
+app.include_router(deploy.router, dependencies=[Depends(authenticate)])
