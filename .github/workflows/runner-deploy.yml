@@ -60,8 +60,22 @@ jobs:
           RUNNER_BIND_HOST: ${{ vars.RUNNER_BIND_HOST }}
           RUNNER_HTTP_SCHEME: ${{ vars.RUNNER_HTTP_SCHEME }}
           RUNNER_TCP_HOST: ${{ vars.RUNNER_TCP_HOST }}
+          R2_ENDPOINT_URL: ${{ vars.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           test -n "$HOST" && test -n "$RUNNER_API_TOKEN"
+          test -n "$R2_ENDPOINT_URL" && test -n "$R2_ACCESS_KEY_ID" && test -n "$R2_SECRET_ACCESS_KEY"
+          [[ "$R2_ENDPOINT_URL" =~ ^https://[a-z0-9.-]+\.r2\.cloudflarestorage\.com$ ]] || {
+            echo 'R2_ENDPOINT_URL must be a Cloudflare R2 S3 endpoint.' >&2
+            exit 1
+          }
+          # S3 access keys should contain no whitespace or quotes; keep the
+          # environment file unambiguous and avoid newline injection.
+          [[ "$R2_ACCESS_KEY_ID" =~ ^[A-Za-z0-9/+_=-]+$ && "$R2_SECRET_ACCESS_KEY" =~ ^[A-Za-z0-9/+_=-]+$ ]] || {
+            echo 'Invalid R2 S3 credentials format.' >&2
+            exit 1
+          }
           [[ "$RUNNER_API_TOKEN" =~ ^[A-Za-z0-9_-]{32,}$ ]] || {
             echo 'RUNNER_API_TOKEN must be an opaque random token (32+ URL-safe characters).' >&2
             exit 1
@@ -81,6 +95,9 @@ jobs:
             printf 'KUBECONFIG=/etc/ulovko/runner.kubeconfig\n'
             printf 'RUNNER_CHALLENGE_NAMESPACE=ctf-demo\n'
             printf 'RUNNER_BIND_HOST=%s\n' "$RUNNER_BIND_HOST"
+            printf 'R2_ENDPOINT_URL=%s\n' "$R2_ENDPOINT_URL"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
             if [[ -n "$RUNNER_HTTP_SCHEME" ]]; then
               printf 'RUNNER_HTTP_SCHEME=%s\n' "$RUNNER_HTTP_SCHEME"
             fi

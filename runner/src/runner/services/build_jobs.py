@@ -5,28 +5,25 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
 from runner.services.builder import BUILDKIT_ADDRESS, build_challenge
-from runner.services.package import load_local_config, resolve_build_contexts
+from runner.services.package import resolve_build_contexts
+from runner.services.r2 import fetch_challenge
+
+logger = logging.getLogger(__name__)
 
 BUILD_ID = re.compile(r"[0-9a-f]{32}\Z")
 BUILD_ROOT = "/var/lib/ctf-runner/builds"
 BUILDKIT_SOCKET = BUILDKIT_ADDRESS.removeprefix("unix://")
 
-logger = logging.getLogger(__name__)
-
 
 def builds_root() -> Path:
     return Path(os.getenv("RUNNER_BUILDS_DIR", BUILD_ROOT))
-
-
-def example_root() -> Path:
-    """Fixed trusted example until package retrieval from R2 is implemented."""
-    return Path(os.getenv("RUNNER_BUILD_PACKAGE", "examples/demo-challenge")).resolve()
 
 
 def _timestamp() -> str:
@@ -141,18 +138,28 @@ def process_next_job() -> bool:
     _write_job(job)
 
     output = _job_dir(job["build_id"]) / "images"
+    (_job_dir(job["build_id"]) / "config.yaml").unlink(missing_ok=True)
     try:
         # build_challenge creates its output directory (exist_ok=False).
         if output.exists():
             shutil.rmtree(output)
-        package = example_root()
-        config = load_local_config(package / "config.yaml")
-        contexts = resolve_build_contexts(package, config)
-        images = build_challenge(config, contexts, output)
+        # Temporary build inputs live inside the worker's writable directory.
+        # Only the validated config.yaml and produced images are retained.
+        with tempfile.TemporaryDirectory(
+            prefix=".package-", dir=_job_dir(job["build_id"])
+        ) as temporary:
+            package = Path(temporary) / "challenge"
+            config = fetch_challenge(job["competition_id"], job["task_id"], package)
+            contexts = resolve_build_contexts(package, config)
+            images = build_challenge(config, contexts, output)
+            # Deployment will need the config that produced these images.
+            shutil.copyfile(
+                package / "config.yaml", _job_dir(job["build_id"]) / "config.yaml"
+            )
         job["images"] = {name: path.name for name, path in images.items()}
         job["status"] = "succeeded"
     except Exception as exc:
-        logger.exception("Build job failed")
+        logger.exception("Build job %s failed", job["build_id"])
         job["status"] = "failed"
         job["images"] = {}
         job["error"] = str(exc)

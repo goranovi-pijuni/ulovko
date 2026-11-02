@@ -10,6 +10,7 @@ User=ctf-runner
 Group=ctf-runner
 SupplementaryGroups=ulovko-build
 WorkingDirectory=/opt/ctf/runner
+EnvironmentFile=/etc/ulovko/runner.env
 ExecStart=/opt/ctf/runner/.venv/bin/python -m runner.services.build_jobs
 Environment=RUNNER_BUILDS_DIR=/var/lib/ctf-runner/builds
 Restart=always
