@@ -1,20 +1,12 @@
-# NestJS API; retain the /api prefix when forwarding.
-api.ulovko.fun {
-    @api path /api /api/*
-
-    handle @api {
-        reverse_proxy 127.0.0.1:3000
-    }
-
-    handle {
-        respond "Not Found" 404
-    }
-}
-
-# React/Vite static SPA.
 ulovko.fun {
     root * /opt/ctf/frontend/dist
     encode zstd gzip
+
+    # NestJS API; preserve the /api prefix.
+    @api path /api /api/*
+    handle @api {
+        reverse_proxy 127.0.0.1:3000
+    }
 
     # Missing built assets should return 404 instead of SPA HTML.
     @assets path /assets/*
@@ -22,9 +14,14 @@ ulovko.fun {
         file_server
     }
 
-    # TanStack Router: client-side routes should serve index.html.
+    # React SPA with TanStack Router.
     handle {
         try_files {path} /index.html
         file_server
     }
+}
+
+# Optional: redirect the old API domain to the canonical origin.
+api.ulovko.fun {
+    redir https://ulovko.fun{uri} 308
 }
