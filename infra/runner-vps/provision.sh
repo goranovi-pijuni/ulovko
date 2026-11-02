@@ -9,18 +9,18 @@ fi
 DEPLOY_KEY=''
 while [[ $# -gt 0 ]]; do
   case "$1" in
-  --deploy-key)
-    if [[ $# -lt 2 ]]; then
-      echo 'Missing path after --deploy-key.' >&2
+    --deploy-key)
+      if [[ $# -lt 2 ]]; then
+        echo 'Missing path after --deploy-key.' >&2
+        exit 1
+      fi
+      DEPLOY_KEY="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1" >&2
       exit 1
-    fi
-    DEPLOY_KEY="$2"
-    shift 2
-    ;;
-  *)
-    echo "Unknown option: $1" >&2
-    exit 1
-    ;;
+      ;;
   esac
 done
 command -v curl >/dev/null || {
@@ -37,7 +37,7 @@ missing=()
 for tool in rsync python3 visudo flock; do
   command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
 done
-if ((${#missing[@]} > 0)); then
+if (( ${#missing[@]} > 0 )); then
   if command -v apt-get >/dev/null 2>&1; then
     apt-get update
     apt-get install -y rsync python3 sudo util-linux
@@ -100,6 +100,20 @@ fi
 # Install and activate rootless BuildKit on this host as part of provisioning.
 bash "$ROOT_DIR/scripts/install-buildkit.sh"
 
+# Caddy is installed during provisioning, but enabled only after Runner CD
+# supplies the Cloudflare token and switches Traefik to ClusterIP.
+if ! getent group ctf-caddy >/dev/null; then
+  groupadd --system ctf-caddy
+fi
+if ! id -u ctf-caddy >/dev/null 2>&1; then
+  useradd --system --home-dir /var/lib/ctf-caddy \
+    --gid ctf-caddy --shell "$(command -v nologin)" ctf-caddy
+fi
+bash "$ROOT_DIR/scripts/install-caddy.sh"
+install -d -m 0755 -o root -g root /etc/caddy
+install -m 0644 -o root -g root "$ROOT_DIR/ctf-caddy.service" \
+  /etc/systemd/system/ctf-caddy.service
+
 if ! id -u deploy >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash deploy
 fi
@@ -109,7 +123,7 @@ fi
 install -d -m 0700 -o deploy -g deploy /home/deploy/.ssh
 if [[ -n "$DEPLOY_KEY" ]]; then
   if [[ ! -s "$DEPLOY_KEY" ]] ||
-    ! grep -Eq '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256) ' "$DEPLOY_KEY"; then
+     ! grep -Eq '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256) ' "$DEPLOY_KEY"; then
     echo "Missing or invalid SSH public key: $DEPLOY_KEY" >&2
     exit 1
   fi
@@ -153,14 +167,14 @@ install -m 0644 -o root -g root \
 # Restrict CI's sudo access to the fixed, root-owned deployment entrypoint.
 printf '%s\n' \
   'deploy ALL=(root) NOPASSWD: /usr/local/sbin/ctf-runner-deploy' \
-  >/etc/sudoers.d/ctf-runner-deploy
+  > /etc/sudoers.d/ctf-runner-deploy
 chmod 0440 /etc/sudoers.d/ctf-runner-deploy
 visudo -cf /etc/sudoers.d/ctf-runner-deploy
 
 # Permit only the fixed, root-owned OCI import helper, not arbitrary k3s commands.
 printf '%s\n' \
   'ctf-runner ALL=(root) NOPASSWD: /usr/local/libexec/ulovko/import-image.sh *' \
-  >/etc/sudoers.d/ctf-runner-image-import
+  > /etc/sudoers.d/ctf-runner-image-import
 chmod 0440 /etc/sudoers.d/ctf-runner-image-import
 visudo -cf /etc/sudoers.d/ctf-runner-image-import
 
@@ -173,4 +187,4 @@ RUNNER_NO_RESTART=1 /usr/local/libexec/ulovko/refresh-token.sh
 # Revoke the old static credential if one was created during development.
 k3s kubectl -n runner-system delete secret runner-api-token --ignore-not-found
 
-echo 'Runner VPS provisioned. Trigger Runner CD in GitHub Actions for the first release.'
+echo 'Runner VPS provisioned. Trigger Runner CD in GitHub Actions to configure and start HTTPS.'

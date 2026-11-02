@@ -42,6 +42,7 @@ Konfiguracija zasebnog VPS servera za pokretanje CTF zadataka pomoću K3s klaste
    | `RUNNER_API_TOKEN` | Zajednički token kojim NestJS pristupa FastAPI-ju |
    | `R2_ACCESS_KEY_ID` | Cloudflare R2 S3 Access Key ID |
    | `R2_SECRET_ACCESS_KEY` | Cloudflare R2 S3 Secret Access Key |
+   | `CLOUDFLARE_API_TOKEN` | Zasebni Cloudflare API token za automatsko izdavanje TLS certifikata (Zone Read, DNS Edit na `ulovko.fun`) |
 
    `RUNNER_API_TOKEN` može se generirati naredbom `openssl rand -hex 32`. SSH host ključ potrebno je neovisno provjeriti prije spremanja u `RUNNER_DEPLOY_KNOWN_HOSTS`. R2 ključ treba ograničiti na čitanje potrebnih objekata; ne treba mu pravo pisanja.
 
@@ -49,10 +50,8 @@ Konfiguracija zasebnog VPS servera za pokretanje CTF zadataka pomoću K3s klaste
 
    | Naziv | Svrha |
    | --- | --- |
-   | `RUNNER_BIND_HOST` | Adresa na kojoj FastAPI sluša; zadano `127.0.0.1` |
    | `RUNNER_API_URL` | Adresa runner API-ja dostupna aplikacijskom backendu, uključujući port ako je potreban |
    | `RUNNER_TCP_HOST` | Javni TCP hostname za prikaz krajnjih točaka, primjerice `tcp.chal.ulovko.fun` (opcionalno) |
-   | `RUNNER_HTTP_SCHEME` | `http` ili `https` za prikaz HTTP krajnjih točaka (opcionalno) |
    | `R2_ENDPOINT_URL` | Cloudflare R2 S3 endpoint odgovarajućeg računa i jurisdikcije |
 
    Primjer zadanog R2 endpointa je `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, a za EU jurisdikciju `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com`. Endpoint mora odgovarati jurisdikciji R2 bucketa; pogrešan endpoint može uzrokovati `NoSuchBucket` iako bucket postoji.
@@ -60,6 +59,24 @@ Konfiguracija zasebnog VPS servera za pokretanje CTF zadataka pomoću K3s klaste
 5. Pokrenuti **Runner CD** preko GitHub Actions (`workflow_dispatch`) ili spojiti promjene na `main`. Nakon uspješnog CI-ja workflow prenosi kod, instalira zaključane Python ovisnosti, postavlja konfiguraciju i systemd jedinice, osvježava Kubernetes pristupne podatke te provjerava rad FastAPI-ja. Nakon prve instalacije redovite objave ne zahtijevaju prijavu na VPS.
 
 Aplikacijski VPS konfigurira se zasebno kroz `infra/app-vps/`. Njegov backend koristi centralnu datoteku `/opt/ctf/backend/.env`, koju Backend CD sastavlja iz `APP_ENV` i zajedničkih `RUNNER_API_TOKEN` / `RUNNER_API_URL` postavki; nije potrebna posebna datoteka za runner integraciju.
+
+## Caddy i HTTPS za runner VPS
+
+Caddy se pokreće izvan K3s-a kao `ctf-caddy.service` na istom VPS-u i sluša na portovima 80 i 443. Za `chal.ulovko.fun` prosljeđuje zahtjeve na FastAPI (`127.0.0.1:8000`), a za `*.chal.ulovko.fun` na interni Traefik Service, koji prema Kubernetes Ingress resursima pronalazi odgovarajući HTTP izazov. TLS se prekida u Caddyju; generirani Ingress resursi ne trebaju vlastite certifikate. TCP izazovi i dalje su dostupni izravno preko Kubernetes NodePortova, bez Caddyja.
+
+Traefik ostaje Kubernetes Ingress controller; K3s manifest `k3s/traefik-config.yaml` namjerno koristi `service.spec.type: ClusterIP` za novije Traefik chart v40 instalacije. Na starijem chartu v39 treba koristiti `service.type: ClusterIP`. Ako postoji drugi `HelmChartConfig` za Traefik, potrebno je spojiti postavke u jedan resurs, a ne održavati dva različita manifesta.
+
+```bash
+sudo systemctl status ctf-caddy.service --no-pager
+sudo journalctl -u ctf-caddy.service -n 80 --no-pager
+sudo k3s kubectl get svc traefik -n kube-system
+sudo /usr/local/bin/caddy-ulovko list-modules | grep dns.providers.cloudflare
+curl -v https://chal.ulovko.fun/health
+# Provjera konkretne HTTP domene izazova:
+curl -Iv https://u-xxxx-web1.chal.ulovko.fun
+```
+
+Caddy konfiguracija nalazi se u `Caddyfile`, systemd jedinica u `ctf-caddy.service`, a instalacijska skripta u `scripts/install-caddy.sh`. FastAPI nema TLS konfiguraciju u Pythonu jer je Caddy HTTPS ulazna točka. Ako Caddy ne može izdati certifikat, pregledati `journalctl -u ctf-caddy.service`; posebno provjeriti Cloudflare token, DNS-01 i je li DNS javno vidljiv.
 
 ## Rootless BuildKit
 
@@ -97,10 +114,12 @@ Ako je VPS ranije provisioniran starijom verzijom pomoćnih skripti, ponovno pok
 | --- | --- |
 | `k3s.service` | Kubernetes klaster i njegovi kontejneri |
 | `ctf-buildkit.service` | Rootless BuildKit daemon |
-| `ctf-runner.service` | FastAPI aplikacija i HTTP zahtjevi za objavu izazova |
+| `ctf-runner.service` | FastAPI na localhostu (interni port 8000) |
+| `ctf-caddy.service` | HTTPS ulazna točka i automatski certifikati za `chal.ulovko.fun` i `*.chal.ulovko.fun` |
 | `ctf-runner-builds.service` | Zasebni worker za red poslova izgradnje |
 | `ctf-runner-token.service` / `.timer` | Periodična obnova Kubernetes tokena |
 | `/etc/ulovko/runner.env` | Centralna konfiguracija FastAPI-ja i build workera |
+| `/etc/ulovko/caddy.env` | Cloudflare DNS-01 token i interni Traefik upstream (root:root, `0600`) |
 | `/etc/ulovko/runner.kubeconfig` | Ograničene Kubernetes vjerodajnice za `runner-api` ServiceAccount |
 | `/var/lib/ctf-runner/builds` | Trajna stanja poslova, zapisnici i OCI arhive |
 
@@ -134,6 +153,7 @@ bash infra/runner-vps/scripts/remove-demo.sh
 sudo systemctl status k3s --no-pager
 sudo systemctl status ctf-buildkit.service --no-pager
 sudo systemctl status ctf-runner.service --no-pager
+sudo systemctl status ctf-caddy.service --no-pager
 sudo systemctl status ctf-runner-builds.service --no-pager
 sudo systemctl status ctf-runner-token.timer --no-pager
 sudo journalctl -u ctf-runner.service -n 100 --no-pager
