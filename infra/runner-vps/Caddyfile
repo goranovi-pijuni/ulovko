@@ -1,0 +1,17 @@
+# FastAPI management API, exposed through HTTPS instead of public port 8000.
+chal.ulovko.fun {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    reverse_proxy 127.0.0.1:8000
+}
+
+# TLS terminates in Caddy. Traefik routes each challenge by its original Host.
+*.chal.ulovko.fun {
+    tls {
+        dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+    }
+
+    reverse_proxy {$TRAEFIK_UPSTREAM}
+}

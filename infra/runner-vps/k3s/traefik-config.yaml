@@ -1,0 +1,12 @@
+# Traefik remains the Ingress controller; host Caddy owns public :80 and :443.
+# K3s releases with Traefik Helm chart v40 use service.spec.type.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |-
+    service:
+      spec:
+        type: ClusterIP

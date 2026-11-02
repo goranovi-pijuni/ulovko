@@ -42,6 +42,10 @@ jobs:
               - 'infra/runner-vps/ctf-runner*.timer'
               - 'infra/runner-vps/scripts/deploy.sh'
               - 'infra/runner-vps/scripts/refresh-token.sh'
+              - 'infra/runner-vps/Caddyfile'
+              - 'infra/runner-vps/ctf-caddy.service'
+              - 'infra/runner-vps/k3s/traefik-config.yaml'
+              - 'infra/runner-vps/scripts/install-caddy.sh'
               - 'infra/runner-vps/k8s/runner-api/**'
               - '.github/workflows/runner-deploy.yml'
 
