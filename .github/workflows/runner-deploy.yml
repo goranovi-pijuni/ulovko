@@ -126,4 +126,9 @@ jobs:
           if ! systemctl is-active --quiet ctf-runner-builds.service; then
             sudo -n /usr/local/sbin/ctf-runner-deploy
           fi
+          # On the first upgrade, the previous helper has not yet installed
+          # the image importer. Its self-update makes the second call possible.
+          if ! test -x /usr/local/libexec/ulovko/import-image.sh; then
+            sudo -n /usr/local/sbin/ctf-runner-deploy
+          fi
           REMOTE

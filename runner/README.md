@@ -1,6 +1,6 @@
 # Ulovko Challenge Runner
 
-FastAPI aplikacija za upravljanje CTF zadacima na zasebnom K3s serveru. Runner trenutačno dohvaća stanje čvorova i radnih opterećenja, grupira pokrenute servise po natjecanjima i zadacima te asinkrono gradi OCI slike iz izvora spremljenih na Cloudflare R2. Automatska Kubernetes objava izgrađenih slika još nije implementirana; infrastruktura i postupak instalacije opisani su u [infra/runner-vps/README.md](../infra/runner-vps/README.md).
+FastAPI aplikacija za upravljanje CTF zadacima na zasebnom K3s serveru. Runner trenutačno dohvaća stanje čvorova i radnih opterećenja, grupira pokrenute servise po natjecanjima i zadacima te asinkrono gradi OCI slike iz izvora spremljenih na Cloudflare R2. Nakon izgradnje runner može uvesti OCI slike u lokalni K3s i pokrenuti servise prema konfiguraciji zadatka; infrastruktura i postupak instalacije opisani su u [infra/runner-vps/README.md](../infra/runner-vps/README.md).
 
 ## Struktura
 
@@ -16,13 +16,15 @@ runner/
 │   │   ├── nodes.py
 │   │   ├── workloads.py
 │   │   ├── challenges.py
-│   │   └── builds.py
+│   │   ├── builds.py
+│   │   └── deploy.py
 │   └── services/
 │       ├── package.py
 │       ├── r2.py
 │       ├── builder.py
 │       ├── build_jobs.py
-│       └── inventory.py
+│       ├── inventory.py
+│       └── deployer.py
 ├── tests/
 ├── pyproject.toml
 └── uv.lock
@@ -37,7 +39,7 @@ Svako natjecanje ima vlastiti R2 bucket nazvan prema `competition_id`, a svaki z
 ```text
 R2 bucket: demo-competition
 └── demo-challenge/
-    ├── config.yaml
+    ├── config.yml
     └── deploy.zip
 ```
 
@@ -53,7 +55,7 @@ deploy/
     └── server.py
 ```
 
-Primjer `config.yaml`:
+Primjer `config.yml`:
 
 ```yaml
 services:
@@ -70,6 +72,8 @@ services:
 
 `type` je `http` ili `tcp`, `path` je putanja build konteksta relativna u odnosu na `deploy/`, a `port` je unutarnji port kontejnera. Svaki servis mora imati vlastiti Dockerfile; runner odbija nepoznata polja, neispravne portove, izlazak iz dozvoljenih putanja i nepodržane ZIP zapise. **Manifest ne sadrži podatke o flagovima** jer njima upravlja aplikacijski backend, a ne runner.
 
+Lokalni primjer nalazi se u `examples/demo-challenge/` i koristi naziv `config.yaml`. Pri prijenosu na R2 isti se sadržaj sprema pod ključem `<task_id>/config.yml`, jer trenutačni R2 dohvat očekuje upravo taj naziv. Direktorij `public/` iz lokalnog primjera namijenjen je igračima i ne uključuje se u Docker build kontekste ni u R2 `deploy.zip`. Upute za primjer nalaze se u [examples/README.md](examples/README.md).
+
 ## Izgradnja slika
 
 Build API ne izvodi Dockerfileove u FastAPI procesu. `POST /builds` zapisuje posao s jedinstvenim `build_id`, a zasebni proces `runner.services.build_jobs` preuzima poslove redom, dohvaća R2 objekte, validira konfiguraciju i pokreće rootless BuildKit za svaki servis. Za izgradnju se ne koristi Docker Engine ni `sudo buildctl`.
@@ -79,7 +83,7 @@ Stanja posla su `queued`, `running`, `succeeded` i `failed`. Red poslova i rezul
 ```text
 /var/lib/ctf-runner/builds/<build_id>/
 ├── job.json
-├── config.yaml
+├── config.yml
 └── images/
     ├── web1.oci.tar
     ├── web1.log
@@ -88,7 +92,7 @@ Stanja posla su `queued`, `running`, `succeeded` i `failed`. Red poslova i rezul
     └── images.json
 ```
 
-Datoteka `config.yaml` i OCI arhive ostaju dostupne nakon uspješne izgradnje; privremeno raspakirani izvori brišu se nakon obrade. `images.json` povezuje imena servisa s nazivima arhiva. Ove arhive još nisu uvezene u K3s i izgradnja sama po sebi ne stvara Kubernetes Deploymente, Servise ili Ingresse.
+Datoteka `config.yml` i OCI arhive ostaju dostupne nakon uspješne izgradnje; privremeno raspakirani izvori brišu se nakon obrade. `images.json` povezuje imena servisa s nazivima arhiva. Izgradnja sama po sebi ne stvara Kubernetes resurse; arhive se uvoze tek na zahtjev `POST /challenges/{competition_id}/{task_id}/deploy`.
 
 ## HTTP API
 
@@ -105,6 +109,8 @@ Svi navedeni endpointi osim `/health` koriste zaglavlje `Authorization: Bearer <
 | `POST` | `/builds` | Predaja novog posla izgradnje; HTTP 202 |
 | `GET` | `/builds/{build_id}` | Stanje posla, pogreška i izlazne arhive |
 | `GET` | `/builds/{build_id}/logs/{service}` | Zadnjih 64 KiB BuildKit zapisnika pojedinog servisa |
+| `POST` | `/challenges/{competition_id}/{task_id}/deploy` | Uvoz izgrađenih OCI slika i pokretanje servisa u K3s-u; HTTP 202 |
+| `DELETE` | `/challenges/{competition_id}/{task_id}` | Brisanje resursa tog zadatka iz K3s-a |
 
 Primjer predaje zadatka koji se nalazi u bucketu `demo-competition` pod prefiksom `demo-challenge/`:
 
@@ -126,7 +132,34 @@ curl -s -H "Authorization: Bearer $RUNNER_API_TOKEN" \
   http://127.0.0.1:8000/builds/BUILD_ID/logs/web1
 ```
 
-Prikaz izazova u `/challenges` temelji se na Kubernetes oznakama već pokrenutih resursa. Uspješno izgrađen zadatak neće se pojaviti u tom prikazu dok se njegove slike ne uvezu i ne pokrenu u K3s-u.
+Prikaz izazova u `/challenges` temelji se na Kubernetes oznakama već pokrenutih resursa. Izgrađen zadatak neće se pojaviti dok se ne objavi u K3s-u.
+
+Za registraciju ruta potrebno je u `runner/src/runner/main.py` dodati `from runner.routes import deploy` te `app.include_router(deploy.router, dependencies=[Depends(authenticate)])` uz postojeće rute. Novi `deployer.py` ne zahtijeva izmjene `builder.py`, `package.py` ni strukture R2 objekata.
+
+## Objava izazova u K3s
+
+Nakon uspješnog `POST /builds` pozvati `POST /challenges/{competition_id}/{task_id}/deploy` s odgovarajućim `build_id`. Runner učitava spremljeni `config.yml`, uvozi OCI arhive u K3s containerd i stvara po jedan Deployment i Service za svaki servis; HTTP servis dobiva Ingress na `https://` ili `http://<generirano-ime>.chal.ulovko.fun` (stvarna HTTPS konfiguracija nije uključena), a TCP servis dobiva automatski dodijeljen NodePort. Ovo je jednostavna objava na jednom K3s čvoru, bez privatne mreže među izazovima i bez automatskog ažuriranja već objavljenog zadatka.
+
+```bash
+curl -s -H "Authorization: Bearer $RUNNER_API_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"build_id":"BUILD_ID"}' \
+  http://127.0.0.1:8000/challenges/demo-competition/demo-challenge/deploy | jq
+
+curl -s -H "Authorization: Bearer $RUNNER_API_TOKEN" \
+  http://127.0.0.1:8000/challenges/demo-competition/demo-challenge | jq
+```
+
+Ako je zadatak već objavljen, nova objava vraća HTTP 409; za promjenu slike prvo ga ukloniti, zatim ponovno objaviti. Uklanjanje ne briše spremljene buildove ni slike iz containerd cachea.
+
+```bash
+curl -s -X DELETE -H "Authorization: Bearer $RUNNER_API_TOKEN" \
+  http://127.0.0.1:8000/challenges/demo-competition/demo-challenge | jq
+```
+
+Za uvoz slika build mora biti spremljen u `/var/lib/ctf-runner/builds`, jer privilegirana skripta namjerno koristi samo tu fiksnu lokaciju; raniji lokalni primjer s `RUNNER_BUILDS_DIR=$HOME/.local/state/ulovko/builds` služi samo za testiranje izgradnje, ne i Kubernetes objave. Za testiranje objave koristi se provisionirani servis i isti direktorij buildova kao na VPS-u.
+
+Import slika koristi root-owned pomoćnu skriptu koju smije pokrenuti samo korisnik `ctf-runner` putem ograničenog `sudoers` pravila. K3s API se i dalje koristi isključivo kroz ograničeni ServiceAccount. Ova jednostavna verzija namijenjena je pouzdanim demo zadacima; prije dopuštanja proizvoljnih organizatorskih kontejnera nužni su jača izolacija i sigurnosna provjera privilegija i mreže.
 
 ## Lokalni razvoj
 
@@ -174,4 +207,4 @@ U produkciji `ctf-runner.service` i `ctf-runner-builds.service` čitaju istu dat
 
 R2 arhive ograničene su maksimalnom veličinom i brojem datoteka, ali rootless BuildKit sam po sebi nije potpuna izolacija za neprijateljske Dockerfileove. Prije omogućavanja proizvoljnih organizatorskih uploadova potrebni su dodatna izolacija, ograničenje resursa i kontrola mrežnog pristupa. Ponovno pokretanje prekinutog posla trenutačno ponovno preuzima aktualne R2 objekte, pa za reproduktivnost izgradnji kasnije treba pohraniti njihove digest vrijednosti ili nepromjenjive verzije.
 
-Sljedeća funkcionalnost je objava izgrađenih slika: uvoz OCI arhiva u K3s ili slanje u registry te stvaranje Deploymenta, Servicea i Ingressa prema validiranom `config.yaml`.
+Prije produkcijskog izvršavanja neprijateljskih kontejnera potrebna je mrežna izolacija, sigurnija granica za import slika i upravljanje životnim ciklusom po natjecanjima.

@@ -9,18 +9,18 @@ fi
 DEPLOY_KEY=''
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --deploy-key)
-      if [[ $# -lt 2 ]]; then
-        echo 'Missing path after --deploy-key.' >&2
-        exit 1
-      fi
-      DEPLOY_KEY="$2"
-      shift 2
-      ;;
-    *)
-      echo "Unknown option: $1" >&2
+  --deploy-key)
+    if [[ $# -lt 2 ]]; then
+      echo 'Missing path after --deploy-key.' >&2
       exit 1
-      ;;
+    fi
+    DEPLOY_KEY="$2"
+    shift 2
+    ;;
+  *)
+    echo "Unknown option: $1" >&2
+    exit 1
+    ;;
   esac
 done
 command -v curl >/dev/null || {
@@ -37,7 +37,7 @@ missing=()
 for tool in rsync python3 visudo flock; do
   command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
 done
-if (( ${#missing[@]} > 0 )); then
+if ((${#missing[@]} > 0)); then
   if command -v apt-get >/dev/null 2>&1; then
     apt-get update
     apt-get install -y rsync python3 sudo util-linux
@@ -88,10 +88,14 @@ k3s kubectl get nodes -o wide
 # The challenge namespace must exist before its namespace-scoped Role.
 k3s kubectl apply -f "$ROOT_DIR/k8s/base/namespace.yaml"
 k3s kubectl apply -f "$ROOT_DIR/k8s/runner-api/access.yaml"
+k3s kubectl apply -f "$ROOT_DIR/k8s/runner-api/deploy-access.yaml"
 
+if ! getent group ctf-runner >/dev/null; then
+  groupadd --system ctf-runner
+fi
 if ! id -u ctf-runner >/dev/null 2>&1; then
   useradd --system --create-home --home-dir /var/lib/ctf-runner \
-    --shell "$(command -v nologin)" ctf-runner
+    --gid ctf-runner --shell "$(command -v nologin)" ctf-runner
 fi
 # Install and activate rootless BuildKit on this host as part of provisioning.
 bash "$ROOT_DIR/scripts/install-buildkit.sh"
@@ -105,7 +109,7 @@ fi
 install -d -m 0700 -o deploy -g deploy /home/deploy/.ssh
 if [[ -n "$DEPLOY_KEY" ]]; then
   if [[ ! -s "$DEPLOY_KEY" ]] ||
-     ! grep -Eq '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256) ' "$DEPLOY_KEY"; then
+    ! grep -Eq '^(ssh-ed25519|ssh-rsa|ecdsa-sha2-nistp256) ' "$DEPLOY_KEY"; then
     echo "Missing or invalid SSH public key: $DEPLOY_KEY" >&2
     exit 1
   fi
@@ -135,6 +139,8 @@ install -m 0755 -o root -g root \
   "$ROOT_DIR/scripts/deploy.sh" /usr/local/sbin/ctf-runner-deploy
 install -m 0755 -o root -g root \
   "$ROOT_DIR/scripts/refresh-token.sh" /usr/local/libexec/ulovko/refresh-token.sh
+install -m 0755 -o root -g root \
+  "$ROOT_DIR/scripts/import-image.sh" /usr/local/libexec/ulovko/import-image.sh
 install -m 0644 -o root -g root \
   "$ROOT_DIR/ctf-runner.service" /etc/systemd/system/ctf-runner.service
 install -m 0644 -o root -g root \
@@ -147,9 +153,16 @@ install -m 0644 -o root -g root \
 # Restrict CI's sudo access to the fixed, root-owned deployment entrypoint.
 printf '%s\n' \
   'deploy ALL=(root) NOPASSWD: /usr/local/sbin/ctf-runner-deploy' \
-  > /etc/sudoers.d/ctf-runner-deploy
+  >/etc/sudoers.d/ctf-runner-deploy
 chmod 0440 /etc/sudoers.d/ctf-runner-deploy
 visudo -cf /etc/sudoers.d/ctf-runner-deploy
+
+# Permit only the fixed, root-owned OCI import helper, not arbitrary k3s commands.
+printf '%s\n' \
+  'ctf-runner ALL=(root) NOPASSWD: /usr/local/libexec/ulovko/import-image.sh *' \
+  >/etc/sudoers.d/ctf-runner-image-import
+chmod 0440 /etc/sudoers.d/ctf-runner-image-import
+visudo -cf /etc/sudoers.d/ctf-runner-image-import
 
 systemctl daemon-reload
 systemctl enable --now ctf-runner-token.timer

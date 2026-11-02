@@ -30,7 +30,7 @@ Konfiguracija zasebnog VPS servera za pokretanje CTF zadataka pomoću K3s klaste
    sudo bash infra/runner-vps/provision.sh --deploy-key /root/ulovko-runner-deploy.pub
    ```
 
-   Skripta instalira ili provjerava K3s, čeka spremnost čvora, primjenjuje `k8s/runner-api/access.yaml`, postavlja rootless BuildKit, instalira `uv`, stvara korisnike i konfigurira systemd. Argument `--deploy-key` postavlja javni ključ korisniku `deploy`; pri kasnijem ponovnom pokretanju provisioning skripte može se izostaviti jer postojeći SSH pristup ostaje sačuvan. FastAPI se ne pokreće prije prve objave aplikacije.
+   Skripta instalira ili provjerava K3s, čeka spremnost čvora, primjenjuje `k8s/runner-api/access.yaml` i `deploy-access.yaml`, postavlja rootless BuildKit, instalira `uv`, stvara korisnike i konfigurira systemd. Argument `--deploy-key` postavlja javni ključ korisniku `deploy`; pri kasnijem ponovnom pokretanju provisioning skripte može se izostaviti jer postojeći SSH pristup ostaje sačuvan. FastAPI se ne pokreće prije prve objave aplikacije.
 
 3. U GitHub Actions okruženju **production** postaviti Secrets:
 
@@ -54,6 +54,8 @@ Konfiguracija zasebnog VPS servera za pokretanje CTF zadataka pomoću K3s klaste
    | `RUNNER_TCP_HOST` | Javni TCP hostname za prikaz krajnjih točaka, primjerice `tcp.chal.ulovko.fun` (opcionalno) |
    | `RUNNER_HTTP_SCHEME` | `http` ili `https` za prikaz HTTP krajnjih točaka (opcionalno) |
    | `R2_ENDPOINT_URL` | Cloudflare R2 S3 endpoint odgovarajućeg računa i jurisdikcije |
+
+   Primjer zadanog R2 endpointa je `https://<ACCOUNT_ID>.r2.cloudflarestorage.com`, a za EU jurisdikciju `https://<ACCOUNT_ID>.eu.r2.cloudflarestorage.com`. Endpoint mora odgovarati jurisdikciji R2 bucketa; pogrešan endpoint može uzrokovati `NoSuchBucket` iako bucket postoji.
 
 5. Pokrenuti **Runner CD** preko GitHub Actions (`workflow_dispatch`) ili spojiti promjene na `main`. Nakon uspješnog CI-ja workflow prenosi kod, instalira zaključane Python ovisnosti, postavlja konfiguraciju i systemd jedinice, osvježava Kubernetes pristupne podatke te provjerava rad FastAPI-ja. Nakon prve instalacije redovite objave ne zahtijevaju prijavu na VPS.
 
@@ -83,7 +85,7 @@ Na Ubuntu sustavima s AppArmor ograničenjima korisničkih namespaceova treba ko
 
 `.github/workflows/runner-ci.yml` provjerava Python aplikaciju (instalacija iz `uv.lock`, Ruff i pytest) i infrastrukturu (Bash, ShellCheck i Kustomize). `.github/workflows/runner-deploy.yml` povezuje se preko SSH-a i prenosi aplikaciju izravno u `/opt/ctf/runner`, gdje se ovisnosti instaliraju pomoću `uv sync --locked --no-dev --no-editable`.
 
-Privilegirani `scripts/deploy.sh` primjenjuje runner RBAC, instalira ažurirane systemd jedinice i konfiguraciju BuildKita, sprema varijable u `/etc/ulovko/runner.env`, obnavlja ograničeni Kubernetes token i ponovno pokreće `ctf-runner.service` te zasebni build worker. Zatim provjerava `/health` i autentificirani `/nodes` endpoint. Datoteka `/opt/ctf/runner/.venv` ostaje sačuvana između objava; ne koriste se direktoriji `staging`, `releases` ni poveznica `current`.
+Privilegirani `scripts/deploy.sh` primjenjuje runner RBAC, instalira ograničenu pomoćnu skriptu za import OCI slika, ažurirane systemd jedinice i konfiguraciju BuildKita, sprema varijable u `/etc/ulovko/runner.env`, obnavlja ograničeni Kubernetes token i ponovno pokreće `ctf-runner.service` te zasebni build worker. Zatim provjerava `/health` i autentificirani `/nodes` endpoint. Datoteka `/opt/ctf/runner/.venv` ostaje sačuvana između objava; ne koriste se direktoriji `staging`, `releases` ni poveznica `current`.
 
 U slučaju neuspjeha GitHub Actions prijavljuje pogrešku. Automatski rollback nije predviđen; povrat na raniju verziju radi se vraćanjem promjene u Gitu i novom objavom. Promjene `k3s/config.yaml` ne primjenjuju se automatski jer mogu zahtijevati kontrolirano ponovno pokretanje K3s-a i utjecati na postojeće izazove.
 
@@ -95,16 +97,20 @@ Ako je VPS ranije provisioniran starijom verzijom pomoćnih skripti, ponovno pok
 | --- | --- |
 | `k3s.service` | Kubernetes klaster i njegovi kontejneri |
 | `ctf-buildkit.service` | Rootless BuildKit daemon |
-| `ctf-runner.service` | FastAPI aplikacija |
+| `ctf-runner.service` | FastAPI aplikacija i HTTP zahtjevi za objavu izazova |
 | `ctf-runner-builds.service` | Zasebni worker za red poslova izgradnje |
 | `ctf-runner-token.service` / `.timer` | Periodična obnova Kubernetes tokena |
 | `/etc/ulovko/runner.env` | Centralna konfiguracija FastAPI-ja i build workera |
 | `/etc/ulovko/runner.kubeconfig` | Ograničene Kubernetes vjerodajnice za `runner-api` ServiceAccount |
 | `/var/lib/ctf-runner/builds` | Trajna stanja poslova, zapisnici i OCI arhive |
 
-Runner koristi Kubernetes ServiceAccount `runner-system/runner-api` s RBAC pravilima iz `k8s/runner-api/access.yaml`. Kubeconfig se generira na runner VPS-u, ne šalje se u GitHub Secrets i obnavlja se pri objavi te periodično kroz systemd timer. Obnova tokena može ponovno pokrenuti FastAPI, ali ne i neovisni build worker.
+Runner koristi Kubernetes ServiceAccount `runner-system/runner-api` s RBAC pravilima iz `k8s/runner-api/access.yaml` (čitanje) i `k8s/runner-api/deploy-access.yaml` (stvaranje i brisanje Deploymenata, Servicea i Ingressa u `ctf-demo`). Kubeconfig se generira na runner VPS-u, ne šalje se u GitHub Secrets i obnavlja se pri objavi te periodično kroz systemd timer. Obnova tokena može ponovno pokrenuti FastAPI, ali ne i neovisni build worker.
 
 Zaštićeni `/etc/ulovko/runner.env` generira Runner CD iz GitHub postavki. Obuhvaća API autentifikaciju, R2 vjerodajnice, mrežne postavke i `KUBECONFIG`; nove varijable treba dodavati u isti mehanizam, a ne ručno na VPS-u. Promjena samog GitHub secreta ne pokreće objavu. Kod promjene zajedničkog `RUNNER_API_TOKEN` potrebno je pokrenuti i Runner CD i Backend CD, uz moguć kratki prekid komunikacije dok se obje strane ne ažuriraju.
+
+## Uvoz OCI slika
+
+`ctf-runner.service` može pokrenuti isključivo root-owned `/usr/local/libexec/ulovko/import-image.sh` s identifikatorom postojećeg builda i nazivom servisa. Pomoćna skripta provjerava putanje i stanje builda te izvršava `k3s ctr -n k8s.io images import`; `ctf-runner` nema opće `sudo` ovlasti niti neposredan pristup containerd socketu. To zahtijeva `NoNewPrivileges=false` u FastAPI jedinici, što je svjestan kompromis ove jednostavne demo implementacije. GitHub Actions i `provision.sh` automatski instaliraju skriptu i sudoers pravilo; ništa se ne uređuje ručno na VPS-u.
 
 ## Demonstracijski Kubernetes servisi
 
