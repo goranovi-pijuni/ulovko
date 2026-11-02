@@ -79,7 +79,12 @@ def _deployment(name: str, labels: dict[str, str], image: str, port: int) -> dic
                 "metadata": {"labels": {**labels, **selector}},
                 "spec": {
                     "automountServiceAccountToken": False,
-                    "securityContext": {"seccompProfile": {"type": "RuntimeDefault"}},
+                    "securityContext": {
+                        "seccompProfile": {"type": "RuntimeDefault"},
+                        "runAsNonRoot": True,
+                        "runAsUser": 10001,
+                        "runAsGroup": 10001,
+                    },
                     "containers": [
                         {
                             "name": "service",
