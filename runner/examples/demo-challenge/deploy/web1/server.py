@@ -1,6 +1,7 @@
 """Small, dependency-free HTTP service for runner build/deployment tests."""
 
 import os
+import socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 
@@ -9,7 +10,23 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/health":
             body = b"ok\n"
         elif self.path == "/":
-            body = b"CTF HTTP demo OK\n"
+            # "test" is the Kubernetes Service name in this challenge namespace.
+            try:
+                with (
+                    socket.create_connection(("test", 5000), timeout=3) as connection,
+                    connection.makefile("rb") as stream,
+                ):
+                    greeting = stream.readline().decode("utf-8").strip()
+                    connection.sendall(b"hello from web1\n")
+                    echo = stream.readline().decode("utf-8").strip()
+            except OSError:
+                self.send_error(502, "Cannot reach private service test:5000")
+                return
+            body = (
+                "CTF HTTP demo OK\n"
+                f"web1 -> test:5000: {greeting}\n"
+                f"test echoed: {echo}\n"
+            ).encode()
         else:
             self.send_error(404, "Not found")
             return

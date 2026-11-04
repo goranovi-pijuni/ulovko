@@ -37,6 +37,8 @@ def test_parse_valid_yaml():
     assert set(config.services) == {"web1", "test"}
     assert config.services["web1"].type == "http"
     assert config.services["test"].port == 5000
+    assert config.services["web1"].public is True
+    assert config.services["test"].public is True
 
 
 def test_parse_bytes_for_future_r2_archive():
@@ -61,6 +63,8 @@ def test_real_demo_package():
     root = Path(__file__).resolve().parents[1] / "examples" / "demo-challenge"
     config = load_local_config(root / "config.yaml")
     assert set(resolve_build_contexts(root, config)) == {"web1", "test"}
+    assert config.services["web1"].public is True
+    assert config.services["test"].public is False
 
 
 @pytest.mark.parametrize(
@@ -73,6 +77,8 @@ def test_real_demo_package():
         "services:\n  web1:\n    type: http\n    path: web1\n    port: 65536",
         "services:\n  web1:\n    type: http\n    path: web1\n    port: '8080'",
         "services:\n  Web_1:\n    type: http\n    path: web1\n    port: 8080",
+        "services:\n  web1:\n    type: http\n    path: web1\n    port: 8080\n    public: 'false'",
+        "services:\n  web1:\n    type: http\n    path: web1\n    port: 8080\n    public: 0",
         "services:\n  web1:\n    type: http\n    path: web1\n    port: 8080\n    unknown: field",
         "services:\n  web1:\n    type: http\n    path: web1\n    port: 8080\nflag:\n  static: true",
     ],

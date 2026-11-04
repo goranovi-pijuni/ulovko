@@ -1,7 +1,6 @@
 # Primjeri CTF zadataka
 
-`demo-challenge/` je ogledni paket za razvoj Ulovko Challenge Runnera.
-Isti raspored datoteka koristit ce se za ZIP koji organizator salje na platformu:
+`demo-challenge/` je ogledni paket za razvoj Ulovko Challenge Runnera. Sadrži dva servisa i zasebne Docker build kontekste; opis konfiguracije, API-ja i načina izgradnje nalazi se u [runner/README.md](../README.md).
 
 ```text
 demo-challenge/
@@ -19,37 +18,42 @@ demo-challenge/
         └── server.py
 ```
 
-`config.yaml` opisuje dva servisa. `path` je relativan direktoriju
-`deploy/`, a `port` je unutarnji TCP port kontejnera. `http` koristi HTTP
-usmjeravanje, dok `tcp` koristi izravni TCP pristup. Polje `flag.static`
-trenutno je primjer konfiguracije; sam demo ne implementira zastavicu.
+`config.yaml` opisuje javni HTTP servis `web1` na portu 8080 i privatni TCP servis `test` na portu 5000 (`public: false`). Privatni servis nema NodePort ni Ingress, ali je dostupan ostalim servisima unutar istog zadatka pod DNS imenom `test:5000`. Otvaranjem javne stranice servisa `web1` vidi se pozdrav i odgovor (echo) dobiven od privatnog servisa `test`. Svaki servis ima vlastiti build kontekst unutar `deploy/`, pa datoteke drugog servisa nisu dio njegove izgradnje. `public/` je namijenjen igračima; runner njime ne upravlja i ne uključuje ga u slike. Podaci o flagovima ne nalaze se u runner konfiguraciji.
 
-Svaki direktorij unutar `deploy/` predstavlja samostalan Docker build
-context. Prilikom izgradnje imagea za `web1` ne smiju se kopirati datoteke
-iz `test/`, i obratno. `public/` je namijenjen igracima i nikada se ne smije
-automatski ukljuciti u Docker build context.
+## Pokretanje bez kontejnera
 
-## Provjera bez Docker/BuildKit alata
-
-Svaki server koristi iskljucivo standardnu Python biblioteku. Iz korijena
-repozitorija moze se privremeno pokrenuti:
+HTTP servis koristi samo Python standardnu biblioteku:
 
 ```bash
 python3 runner/examples/demo-challenge/deploy/web1/server.py
 ```
 
-U drugom terminalu:
+U drugom terminalu provjeriti:
 
 ```bash
 curl -f http://127.0.0.1:8080/health
-curl -f http://127.0.0.1:8080/
 ```
 
-TCP servis:
+TCP servis pokrenuti zasebno:
 
 ```bash
 python3 runner/examples/demo-challenge/deploy/test/server.py
 ```
 
-U drugom terminalu spojiti se pomocu `nc` na port 5000.
+Na port 5000 može se spojiti pomoću `nc`. Izvan Kubernetes namespacea lokalni `web1` neće moći razriješiti ime `test`; za provjeru međusobne komunikacije objavite oba servisa u K3s-u i otvorite javni URL servisa `web1`.
 
+## Izgradnja i prijenos na R2
+
+Iz direktorija `runner/` izgraditi obje OCI arhive pomoću instaliranog rootless BuildKita:
+
+```bash
+uv run python -m runner.services.builder examples/demo-challenge
+```
+
+Za ispitivanje build API-ja potrebno je pripremiti dvije R2 datoteke. Iz direktorija `runner/examples/demo-challenge/` zapakirati samo `deploy/`:
+
+```bash
+zip -qr deploy.zip deploy/
+```
+
+Runneru su za čitanje dovoljni R2 S3 ključevi s pravom Object Read; prijenos datoteka na R2 obavlja se zasebnim ovlaštenjem. Nakon prijenosa posao se pokreće putem `POST /builds`, kao što je opisano u [runner/README.md](../README.md).

@@ -9,3 +9,4 @@ services:
     type: tcp
     path: test
     port: 5000
+    public: false

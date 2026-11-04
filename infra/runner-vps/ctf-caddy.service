@@ -1,0 +1,31 @@
+[Unit]
+Description=Ulovko Caddy HTTPS proxy
+After=network-online.target k3s.service
+Wants=network-online.target
+Requires=k3s.service
+
+[Service]
+Type=notify
+User=ctf-caddy
+Group=ctf-caddy
+EnvironmentFile=/etc/ulovko/caddy.env
+Environment=HOME=/var/lib/ctf-caddy
+Environment=XDG_DATA_HOME=/var/lib/ctf-caddy/data
+Environment=XDG_CONFIG_HOME=/var/lib/ctf-caddy/config
+ExecStart=/usr/local/bin/caddy-ulovko run --config /etc/caddy/ulovko.Caddyfile --adapter caddyfile
+ExecReload=/usr/local/bin/caddy-ulovko reload --config /etc/caddy/ulovko.Caddyfile --adapter caddyfile --force
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=5s
+LimitNOFILE=1048576
+StateDirectory=ctf-caddy
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+ProtectHome=true
+ProtectSystem=strict
+PrivateTmp=true
+ReadWritePaths=/var/lib/ctf-caddy
+
+[Install]
+WantedBy=multi-user.target

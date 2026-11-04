@@ -88,13 +88,31 @@ k3s kubectl get nodes -o wide
 # The challenge namespace must exist before its namespace-scoped Role.
 k3s kubectl apply -f "$ROOT_DIR/k8s/base/namespace.yaml"
 k3s kubectl apply -f "$ROOT_DIR/k8s/runner-api/access.yaml"
+k3s kubectl apply -f "$ROOT_DIR/k8s/runner-api/deploy-access.yaml"
 
+if ! getent group ctf-runner >/dev/null; then
+  groupadd --system ctf-runner
+fi
 if ! id -u ctf-runner >/dev/null 2>&1; then
   useradd --system --create-home --home-dir /var/lib/ctf-runner \
-    --shell "$(command -v nologin)" ctf-runner
+    --gid ctf-runner --shell "$(command -v nologin)" ctf-runner
 fi
 # Install and activate rootless BuildKit on this host as part of provisioning.
 bash "$ROOT_DIR/scripts/install-buildkit.sh"
+
+# Caddy is installed during provisioning, but enabled only after Runner CD
+# supplies the Cloudflare token and switches Traefik to ClusterIP.
+if ! getent group ctf-caddy >/dev/null; then
+  groupadd --system ctf-caddy
+fi
+if ! id -u ctf-caddy >/dev/null 2>&1; then
+  useradd --system --home-dir /var/lib/ctf-caddy \
+    --gid ctf-caddy --shell "$(command -v nologin)" ctf-caddy
+fi
+bash "$ROOT_DIR/scripts/install-caddy.sh"
+install -d -m 0755 -o root -g root /etc/caddy
+install -m 0644 -o root -g root "$ROOT_DIR/ctf-caddy.service" \
+  /etc/systemd/system/ctf-caddy.service
 
 if ! id -u deploy >/dev/null 2>&1; then
   useradd --create-home --shell /bin/bash deploy
@@ -135,6 +153,8 @@ install -m 0755 -o root -g root \
   "$ROOT_DIR/scripts/deploy.sh" /usr/local/sbin/ctf-runner-deploy
 install -m 0755 -o root -g root \
   "$ROOT_DIR/scripts/refresh-token.sh" /usr/local/libexec/ulovko/refresh-token.sh
+install -m 0755 -o root -g root \
+  "$ROOT_DIR/scripts/import-image.sh" /usr/local/libexec/ulovko/import-image.sh
 install -m 0644 -o root -g root \
   "$ROOT_DIR/ctf-runner.service" /etc/systemd/system/ctf-runner.service
 install -m 0644 -o root -g root \
@@ -151,6 +171,13 @@ printf '%s\n' \
 chmod 0440 /etc/sudoers.d/ctf-runner-deploy
 visudo -cf /etc/sudoers.d/ctf-runner-deploy
 
+# Permit only the fixed, root-owned OCI import helper, not arbitrary k3s commands.
+printf '%s\n' \
+  'ctf-runner ALL=(root) NOPASSWD: /usr/local/libexec/ulovko/import-image.sh *' \
+  > /etc/sudoers.d/ctf-runner-image-import
+chmod 0440 /etc/sudoers.d/ctf-runner-image-import
+visudo -cf /etc/sudoers.d/ctf-runner-image-import
+
 systemctl daemon-reload
 systemctl enable --now ctf-runner-token.timer
 
@@ -160,4 +187,4 @@ RUNNER_NO_RESTART=1 /usr/local/libexec/ulovko/refresh-token.sh
 # Revoke the old static credential if one was created during development.
 k3s kubectl -n runner-system delete secret runner-api-token --ignore-not-found
 
-echo 'Runner VPS provisioned. Trigger Runner CD in GitHub Actions for the first release.'
+echo 'Runner VPS provisioned. Trigger Runner CD in GitHub Actions to configure and start HTTPS.'

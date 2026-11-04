@@ -46,7 +46,7 @@ jobs:
 
           # Keep the VPS virtual environment and infrastructure files.
           rsync -az --delete \
-            --exclude='/.venv/' --exclude='/infra/' --exclude='/runner.env.next' \
+            --exclude='/.venv/' --exclude='/infra/' --exclude='/runner.env.next' --exclude='/caddy.env.next' \
             -e "$SSH" \
             runner/ "deploy@${HOST}:/opt/ctf/runner/"
 
@@ -57,19 +57,28 @@ jobs:
         env:
           HOST: ${{ secrets.RUNNER_DEPLOY_HOST }}
           RUNNER_API_TOKEN: ${{ secrets.RUNNER_API_TOKEN }}
-          RUNNER_BIND_HOST: ${{ vars.RUNNER_BIND_HOST }}
-          RUNNER_HTTP_SCHEME: ${{ vars.RUNNER_HTTP_SCHEME }}
           RUNNER_TCP_HOST: ${{ vars.RUNNER_TCP_HOST }}
+          R2_ENDPOINT_URL: ${{ vars.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           test -n "$HOST" && test -n "$RUNNER_API_TOKEN"
+          test -n "$R2_ENDPOINT_URL" && test -n "$R2_ACCESS_KEY_ID" && test -n "$R2_SECRET_ACCESS_KEY"
+          [[ "$R2_ENDPOINT_URL" =~ ^https://[a-z0-9.-]+\.r2\.cloudflarestorage\.com$ ]] || {
+            echo 'R2_ENDPOINT_URL must be a Cloudflare R2 S3 endpoint.' >&2
+            exit 1
+          }
+          # S3 access keys should contain no whitespace or quotes; keep the
+          # environment file unambiguous and avoid newline injection.
+          [[ "$R2_ACCESS_KEY_ID" =~ ^[A-Za-z0-9/+_=-]+$ && "$R2_SECRET_ACCESS_KEY" =~ ^[A-Za-z0-9/+_=-]+$ ]] || {
+            echo 'Invalid R2 S3 credentials format.' >&2
+            exit 1
+          }
           [[ "$RUNNER_API_TOKEN" =~ ^[A-Za-z0-9_-]{32,}$ ]] || {
             echo 'RUNNER_API_TOKEN must be an opaque random token (32+ URL-safe characters).' >&2
             exit 1
           }
 
-          RUNNER_BIND_HOST="${RUNNER_BIND_HOST:-127.0.0.1}"
-          [[ "$RUNNER_BIND_HOST" =~ ^[a-zA-Z0-9.:-]+$ ]] || exit 1
-          [[ -z "$RUNNER_HTTP_SCHEME" || "$RUNNER_HTTP_SCHEME" == 'http' || "$RUNNER_HTTP_SCHEME" == 'https' ]] || exit 1
           [[ -z "$RUNNER_TCP_HOST" || "$RUNNER_TCP_HOST" =~ ^[a-zA-Z0-9.-]+$ ]] || exit 1
 
           umask 077
@@ -80,10 +89,11 @@ jobs:
             printf 'RUNNER_API_TOKEN=%s\n' "$RUNNER_API_TOKEN"
             printf 'KUBECONFIG=/etc/ulovko/runner.kubeconfig\n'
             printf 'RUNNER_CHALLENGE_NAMESPACE=ctf-demo\n'
-            printf 'RUNNER_BIND_HOST=%s\n' "$RUNNER_BIND_HOST"
-            if [[ -n "$RUNNER_HTTP_SCHEME" ]]; then
-              printf 'RUNNER_HTTP_SCHEME=%s\n' "$RUNNER_HTTP_SCHEME"
-            fi
+            printf 'RUNNER_BIND_HOST=127.0.0.1\n'
+            printf 'RUNNER_HTTP_SCHEME=https\n'
+            printf 'R2_ENDPOINT_URL=%s\n' "$R2_ENDPOINT_URL"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
             if [[ -n "$RUNNER_TCP_HOST" ]]; then
               printf 'RUNNER_TCP_HOST=%s\n' "$RUNNER_TCP_HOST"
             fi
@@ -92,6 +102,24 @@ jobs:
           SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
           rsync -az -e "$SSH" "$env_file" \
             "deploy@${HOST}:/opt/ctf/runner/runner.env.next"
+
+      - name: Upload Caddy Cloudflare token
+        env:
+          HOST: ${{ secrets.RUNNER_DEPLOY_HOST }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          test -n "$HOST"
+          [[ "$CLOUDFLARE_API_TOKEN" =~ ^[A-Za-z0-9_-]{20,}$ ]] || {
+            echo 'CLOUDFLARE_API_TOKEN must be a scoped Cloudflare API token.' >&2
+            exit 1
+          }
+          umask 077
+          env_file="$(mktemp)"
+          trap 'rm -f "$env_file"' EXIT
+          printf 'CLOUDFLARE_API_TOKEN=%s\n' "$CLOUDFLARE_API_TOKEN" > "$env_file"
+          SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
+          rsync -az -e "$SSH" "$env_file" \
+            "deploy@${HOST}:/opt/ctf/runner/caddy.env.next"
 
       - name: Install dependencies and restart
         env:
@@ -102,11 +130,7 @@ jobs:
             -o StrictHostKeyChecking=yes \
             "deploy@${HOST}" 'bash -se' <<'REMOTE'
           set -euo pipefail
+          # After updating the repository on the VPS, run provision.sh once
+          # to install the Caddy binary and the updated root-owned deploy helper.
           sudo -n /usr/local/sbin/ctf-runner-deploy
-
-          # The previously installed helper updates itself only at the end.
-          # One additional run is needed on hosts provisioned before builds.
-          if ! systemctl is-active --quiet ctf-runner-builds.service; then
-            sudo -n /usr/local/sbin/ctf-runner-deploy
-          fi
           REMOTE

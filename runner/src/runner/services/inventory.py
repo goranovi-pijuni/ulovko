@@ -2,7 +2,8 @@ import os
 
 from kubernetes import client
 
-NAMESPACE = os.getenv("RUNNER_CHALLENGE_NAMESPACE", "ctf-demo")
+from runner.services.deployer import challenge_namespace
+
 TCP_HOST = os.getenv("RUNNER_TCP_HOST")
 HTTP_SCHEME = os.getenv("RUNNER_HTTP_SCHEME")
 
@@ -13,8 +14,7 @@ MANAGED_SELECTOR = "app.kubernetes.io/managed-by=ulovko-runner"
 
 
 def _inventory(apps: client.AppsV1Api) -> list[dict]:
-    deployments = apps.list_namespaced_deployment(
-        namespace=NAMESPACE,
+    deployments = apps.list_deployment_for_all_namespaces(
         label_selector=MANAGED_SELECTOR,
         _request_timeout=5,
     )
@@ -27,6 +27,8 @@ def _inventory(apps: client.AppsV1Api) -> list[dict]:
         task_id = labels.get(TASK_LABEL)
         service_name = labels.get(SERVICE_LABEL)
         if not all((competition_id, task_id, service_name)):
+            continue
+        if metadata.namespace != challenge_namespace(competition_id, task_id):
             continue
 
         key = (competition_id, task_id)
@@ -118,3 +120,24 @@ def _endpoints(
                 result.append(endpoint)
 
     return result
+
+
+def _challenge_details(
+    challenge: dict, core: client.CoreV1Api, networking: client.NetworkingV1Api
+) -> dict:
+    """Attach public endpoints using Services/Ingresses in this task namespace."""
+    namespace = challenge_namespace(challenge["competition_id"], challenge["task_id"])
+    services = core.list_namespaced_service(namespace, _request_timeout=5).items
+    ingresses = networking.list_namespaced_ingress(namespace, _request_timeout=5).items
+
+    for deployed_service in challenge["services"]:
+        pod_labels = deployed_service.pop("_pod_labels")
+        endpoints = []
+        for service in services:
+            selector = (service.spec.selector or {}) if service.spec else {}
+            if selector and all(
+                pod_labels.get(key) == value for key, value in selector.items()
+            ):
+                endpoints.extend(_endpoints(service, ingresses))
+        deployed_service["endpoints"] = endpoints
+    return challenge
