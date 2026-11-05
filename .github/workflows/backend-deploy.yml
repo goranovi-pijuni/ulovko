@@ -18,7 +18,7 @@ jobs:
 
     environment:
       name: production
-      url: https://api.ulovko.fun/api
+      url: https://ulovko.fun/api
 
     concurrency:
       group: ulovko-backend-production
@@ -52,6 +52,28 @@ jobs:
 
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+
+      - name: Open PostgreSQL tunnel
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          ssh -f -N \
+            -i "$HOME/.ssh/id_ed25519" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ExitOnForwardFailure=yes \
+            -L 15432:127.0.0.1:5432 \
+            "deploy@${HOST}"
+
+      - name: Preview database changes
+        env:
+          DATABASE_URL: ${{ secrets.DB_MIGRATION_URL }}
+        run: npm run db:preview
+
+      - name: Apply database changes
+        env:
+          DATABASE_URL: ${{ secrets.DB_MIGRATION_URL }}
+        run: npm run db:push
 
       - name: Upload build to VPS
         env:

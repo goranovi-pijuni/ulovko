@@ -1,5 +1,6 @@
 # compiled output
 /dist
+/src/database/schema.ts
 /node_modules
 /build
 

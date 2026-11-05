@@ -4,9 +4,15 @@ import { AppService } from './app.service.js';
 import { HealthModule } from './health/health.module.js';
 import { FlagSubmissionModule } from './flag_submission/flag_submission.module.js';
 import { CompetitionsModule } from './competitions/competitions.module.js';
+import { DatabaseModule } from './database/database.module.js';
 
 @Module({
-  imports: [HealthModule, FlagSubmissionModule, CompetitionsModule],
+  imports: [
+    DatabaseModule,
+    HealthModule,
+    FlagSubmissionModule,
+    CompetitionsModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
