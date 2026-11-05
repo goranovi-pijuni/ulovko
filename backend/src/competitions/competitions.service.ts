@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import type { Competition } from './interfaces/competition.interface.js';
+import { Challenge } from './interfaces/challenge.interface.js';
 
 @Injectable()
 export class CompetitionsService {
@@ -46,4 +47,9 @@ export class CompetitionsService {
   findById(id: number): Competition | undefined {
     return this.competitions.find((v) => v.id === id);
   }
+  uploadChallenge(
+    competitionId: number,
+    file: Express.Multer.File,
+    body: Challenge,
+  ) {}
 }
