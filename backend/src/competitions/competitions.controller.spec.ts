@@ -12,6 +12,7 @@ const example: Competition = {
   description: 'Test competition',
   startsAt: new Date('2026-10-25T08:00:00Z'),
   endsAt: new Date('2026-10-28T20:00:00Z'),
+  status: 'finished',
   organisedBy: 1,
   teamCount: 42,
 };
@@ -22,6 +23,7 @@ describe('CompetitionsController', () => {
   const mockService = {
     findAll: vi.fn(),
     findById: vi.fn(),
+    uploadChallenge: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -40,23 +42,23 @@ describe('CompetitionsController', () => {
     controller = module.get(CompetitionsController);
   });
 
-  it('should return all competitions', () => {
-    mockService.findAll.mockReturnValue([example]);
+  it('should return all competitions', async () => {
+    mockService.findAll.mockResolvedValue([example]);
 
-    expect(controller.getCompetitions()).toEqual([example]);
+    await expect(controller.getCompetitions()).resolves.toEqual([example]);
     expect(mockService.findAll).toHaveBeenCalledOnce();
   });
 
-  it('should return a competition by ID', () => {
-    mockService.findById.mockReturnValue(example);
+  it('should return a competition by ID', async () => {
+    mockService.findById.mockResolvedValue(example);
 
-    expect(controller.getById(1)).toEqual(example);
+    await expect(controller.getById(1)).resolves.toEqual(example);
     expect(mockService.findById).toHaveBeenCalledWith(1);
   });
 
-  it('should throw NotFoundException for missing IDs', () => {
-    mockService.findById.mockReturnValue(undefined);
+  it('should throw NotFoundException for missing IDs', async () => {
+    mockService.findById.mockResolvedValue(undefined);
 
-    expect(() => controller.getById(999)).toThrow(NotFoundException);
+    await expect(controller.getById(999)).rejects.toThrow(NotFoundException);
   });
 });

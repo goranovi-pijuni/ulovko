@@ -30,7 +30,7 @@ export class CompetitionsController {
 
   @Get()
   @ApiOperation({ summary: 'Dohvat svih natjecanja' })
-  getCompetitions(): Array<Competition> {
+  getCompetitions(): Promise<Competition[]> {
     return this.competitionsService.findAll();
   }
 
@@ -45,8 +45,8 @@ export class CompetitionsController {
   @ApiOkResponse({ description: 'Natjecanje uspješno dohvaćeno' })
   @ApiBadRequestResponse({ description: 'ID mora biti cijeli broj' })
   @ApiNotFoundResponse({ description: 'Natjecanje nije pronađeno' })
-  getById(@Param('id', ParseIntPipe) id: number): Competition {
-    const result = this.competitionsService.findById(id);
+  async getById(@Param('id', ParseIntPipe) id: number): Promise<Competition> {
+    const result = await this.competitionsService.findById(id);
 
     if (result === undefined) {
       throw new NotFoundException(`Competition with ID ${id} not found`);
