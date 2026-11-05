@@ -80,7 +80,7 @@ Backend se izvršava pod korisnikom `ctfapi`, a Caddy prosljeđuje zahtjeve s `h
 
 `db/schema.ts` je izvor sheme, a backend koristi Drizzle ORM. Provisioning ne postavlja lozinke PostgreSQL korisnika: nakon prve instalacije postaviti ih interaktivno naredbom `sudo -u postgres psql` (`\password ulovko_app`, `\password ulovko_migrator`). PostgreSQL ostaje dostupan lokalno; port 5432 ne treba otvarati prema internetu.
 
-U GitHub environmentu `production` postaviti `DB_MIGRATION_URL` (korisnik `ulovko_migrator`, host `127.0.0.1`, port **15432** zbog SSH tunela). U postojeći `APP_ENV` secret dodati `DATABASE_URL` za korisnika `ulovko_app` na `127.0.0.1:5432`. Backend CI provjerava `db/**` promjene na testnoj PostgreSQL bazi, a CD prije objave poziva `drizzle-kit push`. Prije rizičnih promjena baze napraviti backup i pregledati ispis predviđenog SQL-a; `--force` se ne koristi.
+U GitHub Actions repository secrets postaviti `DB_APP_URL` (korisnik `ulovko_app`, `127.0.0.1:5432`) i `DB_MIGRATION_URL` (korisnik `ulovko_migrator`, `127.0.0.1:15432` preko SSH tunela). Deploy workflow sastavlja backend `.env` iz zasebnih secrets/variables; `APP_ENV` nije potreban. Backend CI provjerava `db/**` promjene na testnoj PostgreSQL bazi, a CD prije objave poziva `drizzle-kit push`. Prije rizičnih promjena baze napraviti backup i pregledati ispis predviđenog SQL-a; `--force` se ne koristi.
 
 ## CI/CD — frontend
 
