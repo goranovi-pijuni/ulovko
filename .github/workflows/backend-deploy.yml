@@ -65,11 +65,6 @@ jobs:
             -L 15432:127.0.0.1:5432 \
             "deploy@${HOST}"
 
-      - name: Preview database changes
-        env:
-          DATABASE_URL: ${{ secrets.DB_MIGRATION_URL }}
-        run: npm run db:preview
-
       - name: Apply database changes
         env:
           DATABASE_URL: ${{ secrets.DB_MIGRATION_URL }}
