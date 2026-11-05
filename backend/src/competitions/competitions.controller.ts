@@ -1,9 +1,13 @@
 import {
   Controller,
   Get,
+  Post,
   Param,
   ParseIntPipe,
   NotFoundException,
+  UseInterceptors,
+  UploadedFile,
+  Body,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -13,8 +17,12 @@ import {
   ApiNotFoundResponse,
 } from '@nestjs/swagger';
 
+import type { Express } from 'express';
 import { CompetitionsService } from './competitions.service.js';
 import type { Competition } from './interfaces/competition.interface.js';
+import type { Challenge } from './interfaces/challenge.interface.js';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Multer } from 'multer';
 
 @Controller('competitions')
 export class CompetitionsController {
@@ -45,5 +53,14 @@ export class CompetitionsController {
     }
 
     return result;
+  }
+  @Post(':competitionId/challenges')
+  @UseInterceptors(FileInterceptor('file'))
+  uploadChallenge(
+    @Param('competitionId', ParseIntPipe) competitionId: number,
+    @UploadedFile() file: Express.Multer.File,
+    @Body() body: Challenge,
+  ) {
+    return this.competitionsService.uploadChallenge(competitionId, file, body);
   }
 }
