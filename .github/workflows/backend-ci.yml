@@ -18,6 +18,24 @@ jobs:
     outputs:
       deploy: ${{ steps.changes.outputs.deploy }}
 
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: ulovko_migrator
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: ulovko
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ulovko_migrator -d ulovko"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://ulovko_migrator:test_password@127.0.0.1:5432/ulovko
+
     defaults:
       run:
         working-directory: backend
@@ -33,10 +51,12 @@ jobs:
           filters: |
             test:
               - 'backend/**'
+              - 'db/**'
               - '.github/workflows/backend-ci.yml'
               - '.github/workflows/backend-deploy.yml'
             deploy:
               - 'backend/**'
+              - 'db/**'
               - '.github/workflows/backend-deploy.yml'
 
       - name: Set up Node.js
@@ -51,9 +71,13 @@ jobs:
         if: steps.changes.outputs.test == 'true'
         run: npm ci
 
+      - name: Apply schema to test database
+        if: steps.changes.outputs.test == 'true'
+        run: npm run db:push
+
       - name: Run unit tests
         if: steps.changes.outputs.test == 'true'
-        run: npx vitest run
+        run: npm test
 
       - name: Build application
         if: steps.changes.outputs.test == 'true'
