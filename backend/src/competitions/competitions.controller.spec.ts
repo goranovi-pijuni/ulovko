@@ -24,6 +24,8 @@ describe('CompetitionsController', () => {
     findAll: vi.fn(),
     findById: vi.fn(),
     uploadChallenge: vi.fn(),
+    createCompetition: vi.fn(),
+    listChallenges: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -54,6 +56,25 @@ describe('CompetitionsController', () => {
 
     await expect(controller.getById(1)).resolves.toEqual(example);
     expect(mockService.findById).toHaveBeenCalledWith(1);
+  });
+
+  it('should create a competition through the service', async () => {
+    mockService.createCompetition.mockResolvedValue(example);
+    await expect(
+      controller.createCompetition({
+        name: 'FER CTF',
+        startsAt: '2026-11-05T10:00:00Z',
+        endsAt: '2026-11-06T10:00:00Z',
+        organisedBy: 1,
+      }),
+    ).resolves.toEqual(example);
+    expect(mockService.createCompetition).toHaveBeenCalledOnce();
+  });
+
+  it('should list challenge metadata', async () => {
+    mockService.listChallenges.mockResolvedValue([]);
+    await expect(controller.listChallenges(1)).resolves.toEqual([]);
+    expect(mockService.listChallenges).toHaveBeenCalledWith(1);
   });
 
   it('should throw NotFoundException for missing IDs', async () => {
