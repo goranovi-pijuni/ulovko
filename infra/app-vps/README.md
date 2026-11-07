@@ -6,18 +6,18 @@ Konfiguracija zajedničkog Debian/Ubuntu VPS-a za **NestJS backend i React/Vite 
 
 | Komponenta | Javna adresa | Način izvođenja | Lokacija na VPS-u |
 | --- | --- | --- | --- |
-| Backend (NestJS) | `https://api.ulovko.fun/api` | Node.js 22, `ctf-backend.service`, port `127.0.0.1:3000` | `/opt/ctf/backend` |
+| Backend (NestJS) | `https://ulovko.fun/api` | Node.js 22, `ctf-backend.service`, port `127.0.0.1:3000` | `/opt/ctf/backend` |
 | Frontend (React/Vite SPA) | `https://ulovko.fun` | Statičke datoteke koje poslužuje Caddy | `/opt/ctf/frontend/dist` |
-| Reverse proxy i HTTPS | Obje domene | Caddy (automatski TLS) | `/etc/caddy/Caddyfile` |
+| Reverse proxy i HTTPS | `ulovko.fun` (+ redirekcija `api.ulovko.fun`) | Caddy (automatski TLS) | `/etc/caddy/Caddyfile` |
 
-Caddy prosljeđuje `/api` zahtjeve s **`api.ulovko.fun`** backendu bez uklanjanja prefiksa `/api`. Na **`ulovko.fun`** poslužuje frontend i vraća `index.html` za klijentske rute (TanStack Router). Na frontend domeni **nema** `/api` proxyja.
+Caddy prosljeđuje `/api` zahtjeve s **`ulovko.fun`** backendu bez uklanjanja prefiksa `/api`, a ostale zahtjeve poslužuje kao frontend SPA (TanStack Router). Stara poddomena `api.ulovko.fun` preusmjerava na istu domenu.
 
 Backend zahtijeva aktivan Node.js proces, a frontend ne: Vite se izgrađuje u GitHub Actions, a na VPS se prenose samo datoteke iz `dist/`. Za frontend nisu potrebni pnpm na VPS-u, Docker ni zaseban systemd servis.
 
 ## Preduvjeti
 
 - Debian/Ubuntu VPS sa systemdom i root pristupom.
-- DNS zapisi `api.ulovko.fun` i `ulovko.fun` koji upućuju na taj VPS. Provjeriti i AAAA zapise ako postoje.
+- DNS zapis `ulovko.fun` (i po želji `api.ulovko.fun` za redirekciju) koji upućuje na taj VPS. Provjeriti i AAAA zapise ako postoje.
 - Otvoreni TCP portovi 22, 80 i 443 (lokalni i vanjski firewall, ako se koriste).
 - Repozitorij s `infra/app-vps/provision.sh`, `Caddyfile` i `ctf-backend.service`.
 - SSH ključ kojim će GitHub Actions pristupati korisničkom računu `deploy`.
@@ -52,9 +52,10 @@ Backend zahtijeva aktivan Node.js proces, a frontend ne: Vite se izgrađuje u Gi
 
 ### Što radi `provision.sh`
 
-Skripta instalira Node.js 22, Caddy, Git, rsync, SSH i ostale potrebne pakete te:
+Skripta instalira Node.js 22, Caddy, PostgreSQL, Git, rsync, SSH i ostale potrebne pakete te:
 
 - stvara korisnika `ctfapi` za pokretanje backenda i korisnika `deploy` za SSH/rsync;
+- priprema lokalnu PostgreSQL bazu `ulovko` s odvojenim korisnicima `ulovko_app` i `ulovko_migrator`;
 - priprema `/opt/ctf/backend` i `/opt/ctf/frontend/dist` za prijenos putem korisnika `deploy`;
 - instalira i omogućuje `ctf-backend.service` iz repozitorija;
 - dopušta korisniku `deploy` samo potrebne `sudo systemctl restart/is-active ctf-backend.service` naredbe;
@@ -68,12 +69,18 @@ Prije prve zamjene postojećeg `/etc/caddy/Caddyfile` stvara se sigurnosna kopij
 
 Datoteke: `.github/workflows/backend-ci.yml` i `.github/workflows/backend-deploy.yml`.
 
-- Na promjene u `backend/**` CI instalira ovisnosti (`npm ci`), pokreće Vitest testove i izrađuje NestJS build. Provjere se pokreću na PR-ovima i pushu na `main`.
-- Nakon uspješnog CI-ja, push u `main` s promjenom u `backend/**` poziva backend deploy workflow.
-- Deploy ponovno izgrađuje backend, šalje `backend/dist/`, `package.json` i `package-lock.json` u `/opt/ctf/backend`, zatim na VPS-u pokreće `npm ci --omit=dev`.
+- Na promjene u `backend/**` ili `db/**` CI instalira ovisnosti (`npm ci`), pokreće Vitest testove i izrađuje NestJS build. Provjere se pokreću na PR-ovima i pushu na `main`.
+- Nakon uspješnog CI-ja, push u `main` s promjenom u `backend/**` ili `db/**` poziva backend deploy workflow.
+- Deploy prvo provjeri i primijeni promjene sheme preko SSH tunela (Drizzle Kit), zatim ponovno izgrađuje backend i šalje `backend/dist/`, `package.json` i `package-lock.json` u `/opt/ctf/backend`, zatim na VPS-u pokreće `npm ci --omit=dev`.
 - Na kraju pokreće `sudo systemctl restart ctf-backend.service` i provjerava da je servis aktivan.
 
-Backend se izvršava pod korisnikom `ctfapi`, a Caddy prosljeđuje zahtjeve s `https://api.ulovko.fun/api` na `127.0.0.1:3000`. Backendov `dist/` **nije** direktorij iz kojeg Caddy poslužuje statički frontend.
+Backend se izvršava pod korisnikom `ctfapi`, a Caddy prosljeđuje zahtjeve s `https://ulovko.fun/api` na `127.0.0.1:3000`. Backendov `dist/` **nije** direktorij iz kojeg Caddy poslužuje statički frontend.
+
+### Baza podataka (Drizzle)
+
+`db/schema.ts` je izvor sheme, a backend koristi Drizzle ORM. Provisioning ne postavlja lozinke PostgreSQL korisnika: nakon prve instalacije postaviti ih interaktivno naredbom `sudo -u postgres psql` (`\password ulovko_app`, `\password ulovko_migrator`). PostgreSQL ostaje dostupan lokalno; port 5432 ne treba otvarati prema internetu.
+
+U GitHub Actions repository secrets postaviti `DB_APP_URL` (korisnik `ulovko_app`, `127.0.0.1:5432`) i `DB_MIGRATION_URL` (korisnik `ulovko_migrator`, `127.0.0.1:15432` preko SSH tunela). Deploy workflow sastavlja backend `.env` iz zasebnih secrets/variables; `APP_ENV` nije potreban. Backend CI provjerava `db/**` promjene na testnoj PostgreSQL bazi, a CD prije objave poziva `drizzle-kit push`. Prije rizičnih promjena baze napraviti backup i pregledati ispis predviđenog SQL-a; `--force` se ne koristi.
 
 ## CI/CD — frontend
 
@@ -84,9 +91,9 @@ Datoteke: `.github/workflows/frontend-ci.yml` i `.github/workflows/frontend-depl
 - Deploy ponovno izrađuje frontend i prenosi **samo** `frontend/dist/` u `/opt/ctf/frontend/dist/` koristeći `rsync --delete`.
 - Nema instalacije Node.js paketa na VPS-u ni restarta servisa; Caddy poslužuje nove datoteke čim su prenesene.
 
-Viteova produkcijska konfiguracija `frontend/.env.production` sadrži `VITE_API_ORIGIN=https://api.ulovko.fun`. Kada se API klijent poveže s backendom, zahtjevi trebaju ići na `https://api.ulovko.fun/api/...`, uz samo jedan `/api` prefiks. Trenutačna mock implementacija natjecanja ne zahtijeva API komunikaciju.
+Frontend koristi relativni API put `/api` i Vite razvojni proxy, pa lokalno i u produkciji šalje zahtjeve na isti origin. Trenutačna mock implementacija natjecanja ne zahtijeva API komunikaciju.
 
-Budući da su `ulovko.fun` i `api.ulovko.fun` različiti originovi, prije stvarne integracije potrebno je na NestJS backendu dopustiti CORS za `https://ulovko.fun`. Ako autentikacija koristi kolačiće, potrebna je i odgovarajuća konfiguracija credentials/CSRF zaštite. Provisioning ne mijenja aplikacijski kod ni CORS postavke.
+Frontend i API koriste isti origin (`ulovko.fun`), pa CORS za njihovu međusobnu komunikaciju nije potreban. Za kolačiće sesije i dalje treba odgovarajuća konfiguracija i CSRF zaštita.
 
 ## Ažuriranje postojećeg VPS-a
 
@@ -114,16 +121,16 @@ ls -l /opt/ctf/backend/dist/main.js
 ls -l /opt/ctf/frontend/dist/index.html
 
 # Javne adrese
-curl -i https://api.ulovko.fun/api
+curl -i https://ulovko.fun/api
 curl -I https://ulovko.fun/
 curl -I https://ulovko.fun/competitions
 curl -I https://ulovko.fun/api
 ```
 
-- `api.ulovko.fun/api` prosljeđuje se NestJS-u; konačni HTTP status ovisi o tome postoji li na backendu ruta `/api`. Odgovor 502 obično znači da backend nije dostupan na `127.0.0.1:3000`.
+- `ulovko.fun/api` prosljeđuje se NestJS-u; konačni HTTP status ovisi o tome postoji li na backendu ruta `/api`. Odgovor 502 obično znači da backend nije dostupan na `127.0.0.1:3000`.
 - `ulovko.fun/competitions` treba dobiti SPA `index.html`, koji potom obrađuje TanStack Router.
-- `ulovko.fun/api` namjerno vraća 404; ne prosljeđuje se na backend.
+- `api.ulovko.fun` preusmjerava se na `ulovko.fun`; nije zaseban API origin.
 - Nepostojeće datoteke pod `/assets/*` vraćaju 404 umjesto HTML-a aplikacije.
 - Ako frontend još nije deployan, početna stranica neće biti dostupna dok ne postoji `dist/index.html`.
 
-Skripta ne postavlja DNS, GitHub Actions secrets ni vanjski firewall pružatelja usluge. Ne konfigurira bazu podataka ni druge aplikacijske servise izvan navedenog backenda i statičkog frontenda.
+Skripta ne postavlja DNS, GitHub Actions secrets ni vanjski firewall pružatelja usluge. PostgreSQL lozinke i sigurnosne kopije konfiguriraju se zasebno; ostali aplikacijski servisi nisu obuhvaćeni.

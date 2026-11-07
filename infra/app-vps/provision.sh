@@ -100,12 +100,44 @@ curl -fsSL https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt \
   -o /etc/apt/sources.list.d/caddy-stable.list
 
 apt-get update
-apt-get install -y nodejs caddy
+apt-get install -y nodejs caddy postgresql postgresql-client
 
 if [[ "$(/usr/bin/node -p 'process.versions.node.split(".")[0]')" != "22" ]]; then
   echo "Expected Node.js 22 at /usr/bin/node; found: $(/usr/bin/node --version)" >&2
   exit 1
 fi
+
+log "Preparing local PostgreSQL database"
+systemctl enable --now postgresql.service
+
+runuser -u postgres -- psql -v ON_ERROR_STOP=1 <<'SQL'
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ulovko_migrator') THEN
+    CREATE ROLE ulovko_migrator LOGIN;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ulovko_app') THEN
+    CREATE ROLE ulovko_app LOGIN;
+  END IF;
+END $$;
+SQL
+
+if [[ "$(runuser -u postgres -- psql -tAc "SELECT 1 FROM pg_database WHERE datname = 'ulovko'")" != "1" ]]; then
+  runuser -u postgres -- createdb --owner=ulovko_migrator ulovko
+fi
+
+runuser -u postgres -- psql -v ON_ERROR_STOP=1 -d ulovko <<'SQL'
+GRANT CONNECT ON DATABASE ulovko TO ulovko_app;
+GRANT USAGE ON SCHEMA public TO ulovko_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ulovko_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ulovko_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE ulovko_migrator IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ulovko_app;
+ALTER DEFAULT PRIVILEGES FOR ROLE ulovko_migrator IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO ulovko_app;
+SQL
+
+# Set the passwords interactively with `sudo -u postgres psql` + `\password <role>`.
+# The application uses ulovko_app; Drizzle Kit uses ulovko_migrator.
 
 log "Creating application and deployment users"
 if ! id -u ctfapi >/dev/null 2>&1; then
@@ -185,3 +217,4 @@ echo "Frontend build directory: $FRONTEND_DIR"
 echo "Backend systemd unit: $SERVICE_NAME"
 echo "API site: https://api.ulovko.fun/api"
 echo "Frontend site: https://ulovko.fun"
+echo "PostgreSQL: local database ulovko (set passwords for ulovko_app and ulovko_migrator)"
