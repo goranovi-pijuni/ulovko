@@ -36,14 +36,14 @@ export class AuthController {
     }
 
     @Get('organizer')
-    @UseGuards(RoleGuard)
+    @UseGuards(AuthenticatedGuard, RoleGuard)
     @Roles(Role.ORGANIZER, Role.ADMIN)
     getOrganizerContent() {
         return { msg: 'Welcome, organizer!' };
     }
 
     @Get('admin')
-    @UseGuards(RoleGuard)
+    @UseGuards(AuthenticatedGuard, RoleGuard)
     @Roles(Role.ADMIN)
     getAdminContent(){
         return { msg: 'Welcome, admin!' };

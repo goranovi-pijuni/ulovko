@@ -4,9 +4,9 @@ export interface User {
     id: number,
     email: string,
     displayName: string,
-    oAuthUserId: string,
-    avatar: string,
+    oauthUserId: string,
+    avatar: string | null,
     permLevel: Role,
-//    creationTime: string,
-//    lastEditTime: string
+    creationTime: Date,
+    lastEditTime: Date  
 }
