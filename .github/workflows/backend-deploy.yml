@@ -110,6 +110,7 @@ jobs:
               echo 'Google and session settings must be single-line values.' >&2
               exit 1
             }
+          done
           test -n "$R2_ENDPOINT_URL" && test -n "$R2_ACCESS_KEY_ID" && test -n "$R2_SECRET_ACCESS_KEY"
           for item in "$R2_ENDPOINT_URL" "$R2_ACCESS_KEY_ID" "$R2_SECRET_ACCESS_KEY"; do
             [[ "$item" != *$'\n'* && "$item" != *$'\r'* ]] || exit 1
