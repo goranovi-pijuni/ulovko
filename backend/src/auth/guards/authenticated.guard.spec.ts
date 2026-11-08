@@ -6,11 +6,12 @@ import { AuthenticatedGuard } from './authenticated.guard.js';
 describe('AuthenticatedGuard', () => {
   const guard = new AuthenticatedGuard();
 
-  const createContext = (authenticated: boolean) => {
+  const createContext = (authenticated: boolean, hasUser = authenticated) => {
     return {
       switchToHttp: () => ({
         getRequest: () => ({
           isAuthenticated: vi.fn(() => authenticated),
+          user: hasUser ? { id: 1 } : undefined,
         }),
       }),
     } as unknown as ExecutionContext;
@@ -24,6 +25,12 @@ describe('AuthenticatedGuard', () => {
 
   it('should reject unauthenticated users', async () => {
     await expect(guard.canActivate(createContext(false))).rejects.toThrow(
+      UnauthorizedException,
+    );
+  });
+
+  it('should reject a session without a rehydrated PostgreSQL user', async () => {
+    await expect(guard.canActivate(createContext(true, false))).rejects.toThrow(
       UnauthorizedException,
     );
   });

@@ -42,14 +42,15 @@ describe('CompetitionsController', () => {
           provide: CompetitionsService,
           useValue: mockService,
         },
-        { provide: AuthenticatedGuard, useValue: { canActivate: () => true } },
-        { provide: RoleGuard, useValue: { canActivate: () => true } },
-        {
-          provide: CompetitionOwnerGuard,
-          useValue: { canActivate: () => true },
-        },
       ],
-    }).compile();
+    })
+      .overrideGuard(AuthenticatedGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(RoleGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(CompetitionOwnerGuard)
+      .useValue({ canActivate: () => true })
+      .compile();
 
     controller = module.get(CompetitionsController);
   });

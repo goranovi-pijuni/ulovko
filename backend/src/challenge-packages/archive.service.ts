@@ -50,15 +50,13 @@ function validatePath(name: string, directory: boolean): string {
   ) {
     reject(`nesigurna putanja ${JSON.stringify(name)}`);
   }
-  if (
-    !(
-      canonical === 'config.yaml' ||
-      canonical === 'public' ||
-      canonical === 'deploy' ||
-      canonical.startsWith('public/') ||
-      canonical.startsWith('deploy/')
-    )
-  ) {
+  if (!(
+    canonical === 'config.yaml' ||
+    canonical === 'public' ||
+    canonical === 'deploy' ||
+    canonical.startsWith('public/') ||
+    canonical.startsWith('deploy/')
+  )) {
     reject(`nedopuštena datoteka ${JSON.stringify(name)}`);
   }
   if ((canonical === 'public' || canonical === 'deploy') && !directory) {
