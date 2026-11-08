@@ -20,6 +20,7 @@ import type {
   Competition,
   CompetitionStatus,
 } from './interfaces/competition.interface.js';
+import type { CreateCompetitionDto } from './dto/create-competition.dto.js';
 
 function status(start: Date, end: Date, now: Date): CompetitionStatus {
   return now < start ? 'upcoming' : now >= end ? 'finished' : 'active';
@@ -99,7 +100,10 @@ export class CompetitionsService {
     return found;
   }
 
-  async createCompetition(body: Record<string, unknown>): Promise<Competition> {
+  async createCompetition(
+    body: CreateCompetitionDto,
+    organizerId: number,
+  ): Promise<Competition> {
     const name = str(body.name, 'name', 200);
     const description =
       body.description === undefined
@@ -109,7 +113,9 @@ export class CompetitionsService {
     const endsAt = date(body.endsAt, 'endsAt');
     if (startsAt >= endsAt)
       throw new BadRequestException('endsAt mora biti nakon startsAt');
-    const organisedBy = int(body.organisedBy, 'organisedBy')!;
+    // Never accept the owner ID from the request body. Passport rehydrates the
+    // authenticated user's ID from PostgreSQL on every request.
+    const organisedBy = int(organizerId, 'organizerId')!;
     const max = int(body.max, 'max', true),
       min = int(body.min, 'min', true),
       decay = int(body.decay, 'decay', true);
@@ -148,8 +154,10 @@ export class CompetitionsService {
   }
 
   async listChallenges(competitionId: number) {
-    if (!(await this.findById(competitionId)))
-      throw new NotFoundException('Natjecanje nije pronađeno');
+    const competition = await this.findById(competitionId);
+    if (!competition) throw new NotFoundException('Natjecanje nije pronađeno');
+    // Public challenge listings must not reveal challenges before the event starts.
+    if (competition.startsAt > new Date()) return [];
     // Never return flag or R2 credentials to the public frontend.
     return this.database.db
       .select({

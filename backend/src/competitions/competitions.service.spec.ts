@@ -89,6 +89,67 @@ describe('CompetitionsService', () => {
   });
 });
 
+describe('Competition creation ownership', () => {
+  it('stores the authenticated creator, ignoring any client-supplied organisedBy', async () => {
+    const insertValues = vi.fn().mockReturnValue({
+      returning: vi.fn().mockResolvedValue([{ id: 4 }]),
+    });
+    const database = {
+      db: { insert: vi.fn().mockReturnValue({ values: insertValues }) },
+    };
+    const r2 = {
+      ensureCompetitionBucket: vi.fn().mockResolvedValue(undefined),
+    };
+    const service = new CompetitionsService(
+      database as unknown as DatabaseService,
+      {} as ArchiveService,
+      r2 as unknown as R2Service,
+    );
+    const expected = {
+      id: 4,
+      name: 'CTF',
+      organisedBy: 7,
+      description: '',
+      startsAt: new Date('2026-12-01T10:00:00Z'),
+      endsAt: new Date('2026-12-02T10:00:00Z'),
+      teamCount: 0,
+      status: 'upcoming' as const,
+    };
+    vi.spyOn(service, 'findById').mockResolvedValue(expected);
+    const data = {
+      name: 'CTF',
+      startsAt: '2026-12-01T10:00:00Z',
+      endsAt: '2026-12-02T10:00:00Z',
+      organisedBy: 999,
+    };
+    await expect(service.createCompetition(data, 7)).resolves.toEqual(expected);
+    expect(insertValues).toHaveBeenCalledWith(
+      expect.objectContaining({ organizedBy: 7 }),
+    );
+    expect(r2.ensureCompetitionBucket).toHaveBeenCalledWith(4);
+  });
+
+  it('rejects a competition whose end precedes its start', async () => {
+    const database = { db: { insert: vi.fn() } };
+    const service = new CompetitionsService(
+      database as unknown as DatabaseService,
+      {} as ArchiveService,
+      {} as R2Service,
+    );
+    await expect(
+      service.createCompetition(
+        {
+          name: 'Invalid',
+          startsAt: '2026-12-02T10:00:00Z',
+          endsAt: '2026-12-01T10:00:00Z',
+        },
+        7,
+      ),
+    ).rejects.toThrow('endsAt mora biti nakon startsAt');
+    expect(database.db.insert).not.toHaveBeenCalled();
+  });
+});
+
 describe('Competition upload validation ordering', () => {
   it('does not call R2 when archive validation fails', async () => {
     const temp = await import('node:fs/promises');

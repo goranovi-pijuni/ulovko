@@ -8,14 +8,21 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Req,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
   ApiBody,
   ApiConsumes,
   ApiCreatedResponse,
+  ApiCookieAuth,
+  ApiForbiddenResponse,
+  ApiUnauthorizedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -24,6 +31,13 @@ import {
 } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { tmpdir } from 'node:os';
+import type { Request } from 'express';
+import { AuthenticatedGuard } from '../auth/guards/authenticated.guard.js';
+import { RoleGuard } from '../roles/role.guard.js';
+import { Roles } from '../roles/roles.decorator.js';
+import { Role } from '../roles/roles.enum.js';
+import { CompetitionOwnerGuard } from './guards/competition-owner.guard.js';
+import { CreateCompetitionDto } from './dto/create-competition.dto.js';
 import { MAX_UPLOAD_BYTES } from '../challenge-packages/archive.service.js';
 import { CompetitionsService } from './competitions.service.js';
 import type { Competition } from './interfaces/competition.interface.js';
@@ -58,26 +72,34 @@ export class CompetitionsController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Stvaranje natjecanja i R2 bucketa' })
-  @ApiCreatedResponse({ description: 'Natjecanje stvoreno' })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      required: ['name', 'startsAt', 'endsAt', 'organisedBy'],
-      properties: {
-        name: { type: 'string' },
-        description: { type: 'string' },
-        startsAt: { type: 'string', format: 'date-time' },
-        endsAt: { type: 'string', format: 'date-time' },
-        organisedBy: { type: 'integer' },
-        min: { type: 'integer' },
-        max: { type: 'integer' },
-        decay: { type: 'integer' },
-      },
-    },
+  @UseGuards(AuthenticatedGuard, RoleGuard)
+  @Roles(Role.ORGANIZER, Role.ADMIN)
+  @UsePipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  )
+  @ApiCookieAuth('session')
+  @ApiOperation({
+    summary:
+      'Stvaranje natjecanja i R2 bucketa (organizator ili administrator)',
   })
-  createCompetition(@Body() body: Record<string, unknown>) {
-    return this.competitionsService.createCompetition(body);
+  @ApiCreatedResponse({ description: 'Natjecanje stvoreno' })
+  @ApiBadRequestResponse({
+    description:
+      'Neispravni podaci ili nedopušteno polje (uključujući organisedBy)',
+  })
+  @ApiUnauthorizedResponse({ description: 'Potrebna je prijava' })
+  @ApiForbiddenResponse({
+    description: 'Potrebna je uloga organizatora ili administratora',
+  })
+  createCompetition(
+    @Body() body: CreateCompetitionDto,
+    @Req() request: Request,
+  ) {
+    return this.competitionsService.createCompetition(body, request.user!.id);
   }
 
   @Get(':id/challenges')
@@ -87,6 +109,18 @@ export class CompetitionsController {
   }
 
   @Post(':competitionId/challenges')
+  @UseGuards(AuthenticatedGuard, RoleGuard, CompetitionOwnerGuard)
+  @Roles(Role.ORGANIZER, Role.ADMIN)
+  @ApiCookieAuth('session')
+  @ApiUnauthorizedResponse({ description: 'Potrebna je prijava' })
+  @ApiForbiddenResponse({
+    description:
+      'Potrebno je vlasništvo nad natjecanjem ili administratorska uloga',
+  })
+  @ApiNotFoundResponse({ description: 'Natjecanje nije pronađeno' })
+  @ApiBadRequestResponse({
+    description: 'Neispravan ID, podaci ili ZIP arhiva',
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       dest: tmpdir(),

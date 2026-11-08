@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
+import type { Request } from 'express';
+import { AuthenticatedGuard } from '../auth/guards/authenticated.guard.js';
+import { RoleGuard } from '../roles/role.guard.js';
+import { CompetitionOwnerGuard } from './guards/competition-owner.guard.js';
 
 import { CompetitionsController } from './competitions.controller.js';
 import { CompetitionsService } from './competitions.service.js';
@@ -38,6 +42,12 @@ describe('CompetitionsController', () => {
           provide: CompetitionsService,
           useValue: mockService,
         },
+        { provide: AuthenticatedGuard, useValue: { canActivate: () => true } },
+        { provide: RoleGuard, useValue: { canActivate: () => true } },
+        {
+          provide: CompetitionOwnerGuard,
+          useValue: { canActivate: () => true },
+        },
       ],
     }).compile();
 
@@ -61,14 +71,19 @@ describe('CompetitionsController', () => {
   it('should create a competition through the service', async () => {
     mockService.createCompetition.mockResolvedValue(example);
     await expect(
-      controller.createCompetition({
-        name: 'FER CTF',
-        startsAt: '2026-11-05T10:00:00Z',
-        endsAt: '2026-11-06T10:00:00Z',
-        organisedBy: 1,
-      }),
+      controller.createCompetition(
+        {
+          name: 'FER CTF',
+          startsAt: '2026-11-05T10:00:00Z',
+          endsAt: '2026-11-06T10:00:00Z',
+        },
+        { user: { id: 23 } } as Request,
+      ),
     ).resolves.toEqual(example);
-    expect(mockService.createCompetition).toHaveBeenCalledOnce();
+    expect(mockService.createCompetition).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'FER CTF' }),
+      23,
+    );
   });
 
   it('should list challenge metadata', async () => {

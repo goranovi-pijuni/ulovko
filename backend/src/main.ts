@@ -34,6 +34,7 @@ async function bootstrap() {
     .setTitle('Ulovko API')
     .setDescription('API za Ulovko CTF platformu')
     .setVersion('1.0')
+    .addCookieAuth('connect.sid', { type: 'apiKey', in: 'cookie' }, 'session')
     .build();
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
