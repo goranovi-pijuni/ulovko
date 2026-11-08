@@ -89,8 +89,25 @@ jobs:
           DB_APP_URL: ${{ secrets.DB_APP_URL }}
           RUNNER_API_TOKEN: ${{ secrets.RUNNER_API_TOKEN }}
           RUNNER_API_URL: ${{ vars.RUNNER_API_URL }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_CALLBACK_URL: ${{ vars.GOOGLE_CALLBACK_URL }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         run: |
           test -n "$DB_APP_URL" && test -n "$RUNNER_API_TOKEN" && test -n "$RUNNER_API_URL"
+          test -n "$GOOGLE_CLIENT_ID" && test -n "$GOOGLE_CLIENT_SECRET"
+          test -n "$GOOGLE_CALLBACK_URL" && test -n "$SESSION_SECRET"
+          test "${#SESSION_SECRET}" -ge 32 || { echo 'SESSION_SECRET must be at least 32 characters.' >&2; exit 1; }
+          [[ "$GOOGLE_CALLBACK_URL" == 'https://ulovko.fun/api/auth/google/callback' ]] || {
+            echo 'GOOGLE_CALLBACK_URL must match the configured Google OAuth redirect.' >&2
+            exit 1
+          }
+          for value in "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" "$GOOGLE_CALLBACK_URL" "$SESSION_SECRET"; do
+            [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || {
+              echo 'Google and session settings must be single-line values.' >&2
+              exit 1
+            }
+          done
           [[ "$DB_APP_URL" == postgresql://* || "$DB_APP_URL" == postgres://* ]] || {
             echo 'DB_APP_URL must be a PostgreSQL connection URL.' >&2
             exit 1
@@ -115,6 +132,10 @@ jobs:
             printf 'DATABASE_URL=%s\n' "$DB_APP_URL"
             printf 'RUNNER_API_TOKEN=%s\n' "$RUNNER_API_TOKEN"
             printf 'RUNNER_API_URL=%s\n' "$RUNNER_API_URL"
+            printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'GOOGLE_CALLBACK_URL=%s\n' "$GOOGLE_CALLBACK_URL"
+            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
           } > "$env_file"
 
           SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"

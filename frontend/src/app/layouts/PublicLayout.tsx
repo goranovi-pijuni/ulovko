@@ -4,8 +4,7 @@ import { Link, Outlet } from '@tanstack/react-router';
 const navLinkClass = 'font-mono text-ink-200 hover:text-ink-100';
 const navLinkActiveClass = 'font-mono text-ink-100';
 
-// Teams, Scoreboard and auth have no pages yet; they are shown, as in the
-// design, but stay disabled until their routes exist.
+// Teams and Scoreboard have no pages yet and remain disabled.
 const upcomingNavItems = ['Teams', 'Scoreboard'];
 
 function ComingSoon({ label }: { label: string }) {
@@ -23,22 +22,18 @@ function ComingSoon({ label }: { label: string }) {
 function AuthButtons() {
   return (
     <>
-      <button
-        type="button"
-        disabled
-        title="Uskoro"
-        className="cursor-not-allowed font-mono text-sm text-ink-200"
+      <a
+        href="/api/auth/google/login"
+        className="font-mono text-sm text-ink-200 hover:text-ink-100"
       >
         LOGIN
-      </button>
-      <button
-        type="button"
-        disabled
-        title="Uskoro"
-        className="cursor-not-allowed rounded-md bg-primary-200 px-3 py-1 font-mono text-sm text-primary-700"
+      </a>
+      <a
+        href="/api/auth/google/login"
+        className="rounded-md bg-primary-200 px-3 py-1 font-mono text-sm text-primary-700"
       >
         SIGN UP
-      </button>
+      </a>
     </>
   );
 }
