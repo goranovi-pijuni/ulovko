@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service.js';
@@ -35,7 +34,7 @@ describe('AuthService', () => {
   };
 
   beforeEach(() => {
-    vi.resetAllMocks();
+    vi.clearAllMocks();
     service = new AuthService(database as any);
   });
 
@@ -47,7 +46,6 @@ describe('AuthService', () => {
       emailVerified: true,
       displayName: 'Test User',
       oauthUserId: 'google-123',
-      avatar: '',
       creationTime: new Date(),
       lastEditTime: new Date(),
     });
@@ -73,12 +71,14 @@ describe('AuthService', () => {
       emailVerified: true,
       displayName: 'New User',
       oauthUserId: 'google-456',
-      avatar: '',
       creationTime: new Date(),
       lastEditTime: new Date(),
     });
 
     expect(insert).toHaveBeenCalled();
+    expect(values).toHaveBeenCalledWith(
+      expect.objectContaining({ avatar: null }),
+    );
     expect(result).toEqual(newUser);
     expect(result.permLevel).toBe(Role.USER);
   });
@@ -92,7 +92,6 @@ describe('AuthService', () => {
         emailVerified: false,
         displayName: 'Unverified User',
         oauthUserId: 'google-789',
-        avatar: '',
         creationTime: new Date(),
         lastEditTime: new Date(),
       }),

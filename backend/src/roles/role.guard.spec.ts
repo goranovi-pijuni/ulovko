@@ -1,6 +1,9 @@
-
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 
 import { RoleGuard } from './role.guard.js';
@@ -54,46 +57,40 @@ describe('RoleGuard', () => {
   it('should allow USER to access USER endpoint', () => {
     reflector.getAllAndOverride.mockReturnValue([Role.USER]);
 
-    expect(
-      guard.canActivate(createContext(Role.USER)),
-    ).toBe(true);
+    expect(guard.canActivate(createContext(Role.USER))).toBe(true);
   });
 
   it('should reject USER from ORGANIZER endpoint', () => {
     reflector.getAllAndOverride.mockReturnValue([Role.ORGANIZER]);
 
-    expect(() => guard.canActivate(createContext(Role.USER)))
-      .toThrow(ForbiddenException);
+    expect(() => guard.canActivate(createContext(Role.USER))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('should allow ORGANIZER to access ORGANIZER endpoint', () => {
     reflector.getAllAndOverride.mockReturnValue([Role.ORGANIZER]);
 
-    expect(
-      guard.canActivate(createContext(Role.ORGANIZER)),
-    ).toBe(true);
+    expect(guard.canActivate(createContext(Role.ORGANIZER))).toBe(true);
   });
 
   it('should reject ORGANIZER from ADMIN endpoint', () => {
     reflector.getAllAndOverride.mockReturnValue([Role.ADMIN]);
 
-    expect(() => guard.canActivate(createContext(Role.ORGANIZER)))
-      .toThrow(ForbiddenException);
+    expect(() => guard.canActivate(createContext(Role.ORGANIZER))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('should allow ADMIN to access ADMIN endpoint', () => {
     reflector.getAllAndOverride.mockReturnValue([Role.ADMIN]);
 
-    expect(
-      guard.canActivate(createContext(Role.ADMIN)),
-    ).toBe(true);
+    expect(guard.canActivate(createContext(Role.ADMIN))).toBe(true);
   });
 
   it('should allow ADMIN to access ORGANIZER endpoint', () => {
     reflector.getAllAndOverride.mockReturnValue([Role.ORGANIZER, Role.ADMIN]);
 
-    expect(
-      guard.canActivate(createContext(Role.ADMIN)),
-    ).toBe(true);
+    expect(guard.canActivate(createContext(Role.ADMIN))).toBe(true);
   });
 });

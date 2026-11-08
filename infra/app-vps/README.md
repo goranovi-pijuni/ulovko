@@ -76,6 +76,8 @@ Datoteke: `.github/workflows/backend-ci.yml` i `.github/workflows/backend-deploy
 
 Backend se izvršava pod korisnikom `ctfapi`, a Caddy prosljeđuje zahtjeve s `https://ulovko.fun/api` na `127.0.0.1:3000`. Backendov `dist/` **nije** direktorij iz kojeg Caddy poslužuje statički frontend.
 
+Za Google prijavu backend deploy dodatno koristi repository variables `GOOGLE_CLIENT_ID` i `GOOGLE_CALLBACK_URL` (`https://ulovko.fun/api/auth/google/callback`) te repository secrets `GOOGLE_CLIENT_SECRET` i `SESSION_SECRET` (npr. generirati s `openssl rand -hex 32`). Istu povratnu adresu potrebno je registrirati u Google Cloud OAuth postavkama. Prijava koristi session cookie; trenutačni in-memory session store gubi sesije nakon ponovnog pokretanja backenda.
+
 ### Baza podataka (Drizzle)
 
 `db/schema.ts` je izvor sheme, a backend koristi Drizzle ORM. Provisioning ne postavlja lozinke PostgreSQL korisnika: nakon prve instalacije postaviti ih interaktivno naredbom `sudo -u postgres psql` (`\password ulovko_app`, `\password ulovko_migrator`). PostgreSQL ostaje dostupan lokalno; port 5432 ne treba otvarati prema internetu.

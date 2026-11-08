@@ -1,4 +1,3 @@
-
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
@@ -12,8 +11,8 @@ import request from 'supertest';
 import { Request, Response, NextFunction } from 'express';
 
 type TestRequest = Request & {
-    user?: any;
-    isAuthenticated: () => this is Request & { user: any };
+  user?: any;
+  isAuthenticated: () => this is Request & { user: any };
 };
 
 describe('AuthController (e2e)', () => {
@@ -35,11 +34,7 @@ describe('AuthController (e2e)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [
-        Reflector,
-        RoleGuard,
-        AuthenticatedGuard,
-      ],
+      providers: [Reflector, RoleGuard, AuthenticatedGuard],
     })
       .overrideGuard(AuthenticatedGuard)
       .useValue({
@@ -54,10 +49,10 @@ describe('AuthController (e2e)', () => {
       .overrideGuard(RoleGuard)
       .useValue({
         canActivate: (context: any) => {
-          const requiredRoles = new Reflector().getAllAndOverride(
-            'roles',
-            [context.getHandler(), context.getClass()],
-          );
+          const requiredRoles = new Reflector().getAllAndOverride('roles', [
+            context.getHandler(),
+            context.getClass(),
+          ]);
 
           if (!requiredRoles?.length) return true;
 
@@ -89,7 +84,7 @@ describe('AuthController (e2e)', () => {
         get: () => currentUser,
       });
 
-      req.isAuthenticated = function(
+      req.isAuthenticated = function (
         this: TestRequest,
       ): this is Request & { user: any } {
         return currentUser !== null;
@@ -110,15 +105,11 @@ describe('AuthController (e2e)', () => {
   });
 
   it('should reject unauthenticated users from profile', async () => {
-    await request(app.getHttpServer())
-      .get('/api/auth/profile')
-      .expect(401);
+    await request(app.getHttpServer()).get('/api/auth/profile').expect(401);
   });
 
   it('should reject unauthenticated users from organizer endpoint', async () => {
-    await request(app.getHttpServer())
-      .get('/api/auth/organizer')
-      .expect(401);
+    await request(app.getHttpServer()).get('/api/auth/organizer').expect(401);
   });
 
   it('should reject regular users from organizer endpoint', async () => {
@@ -128,9 +119,7 @@ describe('AuthController (e2e)', () => {
       permLevel: Role.USER,
     };
 
-    await request(app.getHttpServer())
-      .get('/api/auth/organizer')
-      .expect(403);
+    await request(app.getHttpServer()).get('/api/auth/organizer').expect(403);
   });
 
   it('should allow organizers to access organizer endpoint', async () => {
@@ -155,9 +144,7 @@ describe('AuthController (e2e)', () => {
       permLevel: Role.ORGANIZER,
     };
 
-    await request(app.getHttpServer())
-      .get('/api/auth/admin')
-      .expect(403);
+    await request(app.getHttpServer()).get('/api/auth/admin').expect(403);
   });
 
   it('should allow admins to access admin endpoint', async () => {

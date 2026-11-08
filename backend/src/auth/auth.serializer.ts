@@ -1,22 +1,28 @@
-import { Inject, Injectable } from "@nestjs/common";
-import { PassportSerializer } from "@nestjs/passport";
-import { AuthService } from "./auth.service.js";
-import { User } from "../users/interfaces/user.interface.js";
+import { Injectable } from '@nestjs/common';
+import { PassportSerializer } from '@nestjs/passport';
+import { AuthService } from './auth.service.js';
+import type { User } from '../users/interfaces/user.interface.js';
 
 @Injectable()
 export class SessionSerializer extends PassportSerializer {
-    constructor (
-        private readonly authService: AuthService,
-    ) {
-        super();
-    }
+  constructor(private readonly authService: AuthService) {
+    super();
+  }
 
-    serializeUser(user: User, done: Function) {
-        done(null, user);
-    }
+  serializeUser(user: User, done: (err: Error | null, id?: number) => void) {
+    // Store the ID rather than a potentially stale user record in the session.
+    done(null, user.id);
+  }
 
-    async deserializeUser(payload: any, done: Function) {
-        const user = await this.authService.findUser(payload.id);
-        return user ? done(null, user) : done(null, null);
+  async deserializeUser(
+    id: number,
+    done: (err: Error | null, user?: User | false) => void,
+  ) {
+    try {
+      const user = await this.authService.findUser(id);
+      done(null, user ?? false);
+    } catch (error) {
+      done(error instanceof Error ? error : new Error(String(error)));
     }
+  }
 }

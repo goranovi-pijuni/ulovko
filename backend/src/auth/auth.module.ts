@@ -8,26 +8,22 @@ import { GoogleAuthGuard } from './guards/google-auth.guard.js';
 import { AuthenticatedGuard } from './guards/authenticated.guard.js';
 import { DatabaseModule } from '../database/database.module.js';
 
-
 @Module({
   imports: [
     PassportModule.register({
       session: true,
     }),
-    DatabaseModule
+    DatabaseModule,
   ],
   providers: [
     GoogleStrategy,
     SessionSerializer,
     AuthService,
     GoogleAuthGuard,
-    AuthenticatedGuard
+    AuthenticatedGuard,
   ],
   controllers: [AuthController],
 
-  exports:[
-    GoogleAuthGuard,
-    AuthenticatedGuard
-  ]
+  exports: [GoogleAuthGuard, AuthenticatedGuard],
 })
 export class AuthModule {}
