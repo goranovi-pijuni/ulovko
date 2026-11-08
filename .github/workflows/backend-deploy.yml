@@ -87,6 +87,9 @@ jobs:
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           DB_APP_URL: ${{ secrets.DB_APP_URL }}
+          R2_ENDPOINT_URL: ${{ vars.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           RUNNER_API_TOKEN: ${{ secrets.RUNNER_API_TOKEN }}
           RUNNER_API_URL: ${{ vars.RUNNER_API_URL }}
           GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
@@ -107,6 +110,9 @@ jobs:
               echo 'Google and session settings must be single-line values.' >&2
               exit 1
             }
+          test -n "$R2_ENDPOINT_URL" && test -n "$R2_ACCESS_KEY_ID" && test -n "$R2_SECRET_ACCESS_KEY"
+          for item in "$R2_ENDPOINT_URL" "$R2_ACCESS_KEY_ID" "$R2_SECRET_ACCESS_KEY"; do
+            [[ "$item" != *$'\n'* && "$item" != *$'\r'* ]] || exit 1
           done
           [[ "$DB_APP_URL" == postgresql://* || "$DB_APP_URL" == postgres://* ]] || {
             echo 'DB_APP_URL must be a PostgreSQL connection URL.' >&2
@@ -130,6 +136,9 @@ jobs:
           {
             printf 'NODE_ENV=production\nPORT=3000\n'
             printf 'DATABASE_URL=%s\n' "$DB_APP_URL"
+            printf 'R2_ENDPOINT_URL=%s\n' "$R2_ENDPOINT_URL"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
             printf 'RUNNER_API_TOKEN=%s\n' "$RUNNER_API_TOKEN"
             printf 'RUNNER_API_URL=%s\n' "$RUNNER_API_URL"
             printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"

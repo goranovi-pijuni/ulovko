@@ -7,6 +7,7 @@ import { PassportModule } from '@nestjs/passport';
 import { GoogleAuthGuard } from './guards/google-auth.guard.js';
 import { AuthenticatedGuard } from './guards/authenticated.guard.js';
 import { DatabaseModule } from '../database/database.module.js';
+import { RolesModule } from '../roles/roles.module.js';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { DatabaseModule } from '../database/database.module.js';
       session: true,
     }),
     DatabaseModule,
+    RolesModule,
   ],
   providers: [
     GoogleStrategy,
