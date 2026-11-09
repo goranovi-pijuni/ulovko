@@ -6,10 +6,11 @@ import {
   HttpStatus,
   Post,
   Req,
-  UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
+  ApiCookieAuth,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -20,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import type { Request } from 'express';
 
+import { AuthenticatedGuard } from '../auth/guards/authenticated.guard.js';
 import {
   FlagSubmissionService,
   type SubmissionResult,
@@ -48,14 +50,13 @@ export class SubmissionResponseDto implements SubmissionResult {
   challengeId!: number;
 }
 
-/** Zahtjev u kojem je autentikacijski guard (kad postoji) postavio `user`. */
-type AuthenticatedRequest = Request & { user?: { id?: unknown } };
-
 @Controller('flag-submission')
+@UseGuards(AuthenticatedGuard)
+@ApiCookieAuth('session')
 export class FlagSubmissionController {
   constructor(private readonly flagSubmissionService: FlagSubmissionService) {}
 
-  @Post() // POST /api/flag-submission
+  @Post()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Predaja zastavice za zadatak' })
   @ApiOkResponse({
@@ -75,32 +76,11 @@ export class FlagSubmissionController {
     description: 'Previše pokušaja za ovaj zadatak',
   })
   submit(
-    @Req() req: AuthenticatedRequest,
+    @Req() req: Request,
     @Body() body: SubmitFlagDto,
   ): Promise<SubmissionResult> {
-    const userId = this.resolveUserId(req);
     const { challengeId, flag } = this.validate(body);
-    return this.flagSubmissionService.submit(userId, challengeId, flag);
-  }
-
-  /**
-   * Identitet dolazi isključivo iz sesije (`req.user`, postavlja ga auth guard),
-   * nikada iz tijela zahtjeva. Dok auth ne postoji, za lokalni razvoj postoji
-   * zaobilaznica preko zaglavlja X-User-Id koja je isključena osim ako je
-   * postavljeno FLAG_SUBMISSION_DEV=1 (NODE_ENV se u deployu ne postavlja).
-   */
-  private resolveUserId(req: AuthenticatedRequest): number {
-    let candidate: unknown = req.user?.id;
-
-    if (candidate === undefined && process.env.FLAG_SUBMISSION_DEV === '1') {
-      candidate = req.headers['x-user-id'];
-    }
-
-    const id = Number(candidate);
-    if (candidate === undefined || !Number.isInteger(id) || id <= 0) {
-      throw new UnauthorizedException('Potrebna je prijava');
-    }
-    return id;
+    return this.flagSubmissionService.submit(req.user!.id, challengeId, flag);
   }
 
   private validate(body: unknown): SubmitFlagDto {

@@ -1,25 +1,20 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
 import { FlagSubmissionController } from './flag_submission.controller.js';
+import { DatabaseFlagSubmissionRepository } from './flag_submission.repository.js';
 import {
   FlagSubmissionRepository,
   FlagSubmissionService,
-  InMemoryFlagSubmissionRepository,
 } from './flag_submission.service.js';
 
 @Module({
+  imports: [AuthModule],
   controllers: [FlagSubmissionController],
   providers: [
     FlagSubmissionService,
     {
-      // TODO: zamijeniti pravom implementacijom nad bazom kad bude dostupna.
       provide: FlagSubmissionRepository,
-      useFactory: () => {
-        const repository = new InMemoryFlagSubmissionRepository();
-        if (process.env.FLAG_SUBMISSION_DEV === '1') {
-          repository.seedDemoData();
-        }
-        return repository;
-      },
+      useClass: DatabaseFlagSubmissionRepository,
     },
   ],
 })

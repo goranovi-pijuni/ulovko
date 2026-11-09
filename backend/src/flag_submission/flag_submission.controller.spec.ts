@@ -13,7 +13,6 @@ describe('FlagSubmissionController', () => {
   let app: INestApplication;
   const mockService = { submit: vi.fn() };
 
-  /** `sessionUserId` simulira auth guard koji postavlja `req.user`. */
   async function createApp(sessionUserId?: number) {
     const moduleRef = await Test.createTestingModule({
       controllers: [FlagSubmissionController],
@@ -25,6 +24,7 @@ describe('FlagSubmissionController', () => {
     if (sessionUserId !== undefined) {
       app.use((req: any, _res: unknown, next: () => void) => {
         req.user = { id: sessionUserId };
+        req.isAuthenticated = () => true;
         next();
       });
     }
@@ -55,17 +55,7 @@ describe('FlagSubmissionController', () => {
       expect(mockService.submit).not.toHaveBeenCalled();
     });
 
-    it('zaglavlje X-User-Id ne vrijedi dok nije uključen FLAG_SUBMISSION_DEV', async () => {
-      await createApp();
-
-      await request(app.getHttpServer())
-        .post('/api/flag-submission')
-        .set('X-User-Id', '7')
-        .send({ challengeId: 10, flag: 'FLAG{x}' })
-        .expect(401);
-    });
-
-    it('uz FLAG_SUBMISSION_DEV=1 prihvaća zaglavlje X-User-Id', async () => {
+    it('zaglavlje X-User-Id se ignorira čak i uz FLAG_SUBMISSION_DEV=1', async () => {
       vi.stubEnv('FLAG_SUBMISSION_DEV', '1');
       await createApp();
 
@@ -73,8 +63,8 @@ describe('FlagSubmissionController', () => {
         .post('/api/flag-submission')
         .set('X-User-Id', '7')
         .send({ challengeId: 10, flag: 'FLAG{x}' })
-        .expect(200);
-      expect(mockService.submit).toHaveBeenCalledWith(7, 10, 'FLAG{x}');
+        .expect(401);
+      expect(mockService.submit).not.toHaveBeenCalled();
     });
 
     it('koristi korisnika iz sesije i ignorira userId iz tijela zahtjeva', async () => {
@@ -85,20 +75,6 @@ describe('FlagSubmissionController', () => {
         .send({ challengeId: 10, flag: 'FLAG{x}', userId: 999 })
         .expect(200);
       expect(mockService.submit).toHaveBeenCalledWith(5, 10, 'FLAG{x}');
-    });
-
-    it('odbija neispravan identitet u zaglavlju', async () => {
-      vi.stubEnv('FLAG_SUBMISSION_DEV', '1');
-      await createApp();
-
-      for (const bad of ['abc', '0', '-3', '1.5']) {
-        await request(app.getHttpServer())
-          .post('/api/flag-submission')
-          .set('X-User-Id', bad)
-          .send({ challengeId: 10, flag: 'FLAG{x}' })
-          .expect(401);
-      }
-      expect(mockService.submit).not.toHaveBeenCalled();
     });
   });
 

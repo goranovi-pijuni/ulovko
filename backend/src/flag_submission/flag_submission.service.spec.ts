@@ -8,11 +8,13 @@ import {
 
 import {
   ATTEMPT_WINDOW_MS,
+  FlagSubmissionRepository,
   FlagSubmissionService,
   InMemoryFlagSubmissionRepository,
   MAX_ATTEMPTS,
 } from './flag_submission.service.js';
 import { FlagSubmissionModule } from './flag_submission.module.js';
+import { DatabaseFlagSubmissionRepository } from './flag_submission.repository.js';
 
 const NOW = new Date('2026-11-04T12:00:00Z');
 const FLAG = 'FLAG{secret}';
@@ -49,7 +51,6 @@ describe('FlagSubmissionService', () => {
       publishingDate: new Date('2026-11-04T09:00:00Z'),
     });
     const since = new Date('2026-11-04T08:00:00Z');
-    // Tim 1: korisnici 1, 2 i 4..8; tim 2: korisnik 3.
     for (const userId of [1, 2, 4, 5, 6, 7, 8]) {
       repo.memberships.push({
         userId,
@@ -115,7 +116,6 @@ describe('FlagSubmissionService', () => {
     it('ponovljena točna predaja istog tima ne stvara novo rješenje', async () => {
       await service.submit(1, CHALLENGE, FLAG);
 
-      // Isti korisnik i drugi član istog tima.
       await expect(service.submit(1, CHALLENGE, FLAG)).resolves.toMatchObject({
         status: 'already_solved',
       });
@@ -253,36 +253,16 @@ describe('FlagSubmissionService', () => {
       vi.unstubAllEnvs();
     });
 
-    it('uz FLAG_SUBMISSION_DEV=1 koristi demo podatke', async () => {
-      vi.stubEnv('FLAG_SUBMISSION_DEV', '1');
+    it('koristi repozitorij nad bazom podataka', async () => {
+      vi.stubEnv('GOOGLE_CLIENT_ID', 'id');
+      vi.stubEnv('GOOGLE_CLIENT_SECRET', 'secret');
+      vi.stubEnv('GOOGLE_CALLBACK_URL', 'http://localhost/callback');
       const moduleRef = await Test.createTestingModule({
         imports: [FlagSubmissionModule],
       }).compile();
-      const wired = moduleRef.get(FlagSubmissionService);
 
-      await expect(
-        wired.submit(1, 1, 'FLAG{ulovko_demo}'),
-      ).resolves.toMatchObject({
-        status: 'correct',
-      });
-      await expect(
-        wired.submit(2, 1, 'FLAG{ulovko_demo}'),
-      ).resolves.toMatchObject({
-        status: 'already_solved',
-      });
-      await expect(wired.submit(3, 1, 'FLAG{krivo}')).resolves.toMatchObject({
-        status: 'incorrect',
-      });
-    });
-
-    it('bez FLAG_SUBMISSION_DEV nema demo podataka', async () => {
-      const moduleRef = await Test.createTestingModule({
-        imports: [FlagSubmissionModule],
-      }).compile();
-      const wired = moduleRef.get(FlagSubmissionService);
-
-      await expect(wired.submit(1, 1, 'FLAG{ulovko_demo}')).rejects.toThrow(
-        NotFoundException,
+      expect(moduleRef.get(FlagSubmissionRepository)).toBeInstanceOf(
+        DatabaseFlagSubmissionRepository,
       );
     });
   });
