@@ -8,17 +8,20 @@ import {
 
 import {
   ATTEMPT_WINDOW_MS,
-  FlagSubmissionRepository,
   FlagSubmissionService,
-  InMemoryFlagSubmissionRepository,
   MAX_ATTEMPTS,
 } from './flag_submission.service.js';
+import {
+  DatabaseFlagSubmissionRepository,
+  FlagSubmissionRepository,
+} from './flag_submission.repository.js';
 import { FlagSubmissionModule } from './flag_submission.module.js';
-import { DatabaseFlagSubmissionRepository } from './flag_submission.repository.js';
 
 const NOW = new Date('2026-11-04T12:00:00Z');
 const FLAG = 'FLAG{secret}';
 const CHALLENGE = 10;
+
+const TEAM_OF: Record<number, number> = { 1: 1, 2: 1, 3: 2 };
 
 async function statusOf(promise: Promise<unknown>): Promise<number> {
   try {
@@ -31,42 +34,40 @@ async function statusOf(promise: Promise<unknown>): Promise<number> {
 }
 
 describe('FlagSubmissionService', () => {
-  let repo: InMemoryFlagSubmissionRepository;
+  const repo = {
+    findChallenge: vi.fn(),
+    findCompetition: vi.fn(),
+    findTeamId: vi.fn(),
+    hasTeamSolved: vi.fn(),
+    recordSolution: vi.fn(),
+  };
   let service: FlagSubmissionService;
 
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(NOW);
+    vi.resetAllMocks();
 
-    repo = new InMemoryFlagSubmissionRepository();
-    repo.competitions.set(1, {
-      id: 1,
-      startsAt: new Date('2026-11-04T08:00:00Z'),
-      endsAt: new Date('2026-11-05T08:00:00Z'),
-    });
-    repo.challenges.set(CHALLENGE, {
+    repo.findChallenge.mockResolvedValue({
       id: CHALLENGE,
       competitionId: 1,
       flag: FLAG,
       publishingDate: new Date('2026-11-04T09:00:00Z'),
     });
-    const since = new Date('2026-11-04T08:00:00Z');
-    for (const userId of [1, 2, 4, 5, 6, 7, 8]) {
-      repo.memberships.push({
-        userId,
-        teamId: 1,
-        competitionId: 1,
-        startsAt: since,
-      });
-    }
-    repo.memberships.push({
-      userId: 3,
-      teamId: 2,
-      competitionId: 1,
-      startsAt: since,
+    repo.findCompetition.mockResolvedValue({
+      id: 1,
+      startsAt: new Date('2026-11-04T08:00:00Z'),
+      endsAt: new Date('2026-11-05T08:00:00Z'),
     });
+    repo.findTeamId.mockImplementation(
+      async (userId: number) => TEAM_OF[userId],
+    );
+    repo.hasTeamSolved.mockResolvedValue(false);
+    repo.recordSolution.mockResolvedValue(true);
 
-    service = new FlagSubmissionService(repo);
+    service = new FlagSubmissionService(
+      repo as unknown as FlagSubmissionRepository,
+    );
   });
 
   afterEach(() => {
@@ -79,15 +80,13 @@ describe('FlagSubmissionService', () => {
         status: 'correct',
         challengeId: CHALLENGE,
       });
-      expect(repo.solutions).toEqual([
-        {
-          userId: 1,
-          teamId: 1,
-          competitionId: 1,
-          challengeId: CHALLENGE,
-          solveTime: NOW,
-        },
-      ]);
+      expect(repo.recordSolution).toHaveBeenCalledWith({
+        userId: 1,
+        teamId: 1,
+        competitionId: 1,
+        challengeId: CHALLENGE,
+        solveTime: NOW,
+      });
     });
 
     it('pogrešnu zastavicu ne evidentira', async () => {
@@ -97,7 +96,7 @@ describe('FlagSubmissionService', () => {
         status: 'incorrect',
         challengeId: CHALLENGE,
       });
-      expect(repo.solutions).toHaveLength(0);
+      expect(repo.recordSolution).not.toHaveBeenCalled();
     });
 
     it('ignorira razmake oko zastavice, ali razlikuje velika i mala slova', async () => {
@@ -113,53 +112,60 @@ describe('FlagSubmissionService', () => {
   });
 
   describe('bodovanje po timu (F-011)', () => {
-    it('ponovljena točna predaja istog tima ne stvara novo rješenje', async () => {
-      await service.submit(1, CHALLENGE, FLAG);
+    it('provjerava rješenje za tim korisnika u natjecanju zadatka', async () => {
+      await service.submit(3, CHALLENGE, FLAG);
 
-      await expect(service.submit(1, CHALLENGE, FLAG)).resolves.toMatchObject({
-        status: 'already_solved',
-      });
+      expect(repo.findTeamId).toHaveBeenCalledWith(3, 1, NOW);
+      expect(repo.hasTeamSolved).toHaveBeenCalledWith(2, CHALLENGE);
+    });
+
+    it('ako je tim već riješio zadatak, vraća already_solved bez provjere zastavice', async () => {
+      repo.hasTeamSolved.mockResolvedValue(true);
+
       await expect(service.submit(2, CHALLENGE, FLAG)).resolves.toMatchObject({
         status: 'already_solved',
       });
-      expect(repo.solutions).toHaveLength(1);
+      await expect(
+        service.submit(2, CHALLENGE, 'FLAG{wrong}'),
+      ).resolves.toMatchObject({ status: 'already_solved' });
+      expect(repo.recordSolution).not.toHaveBeenCalled();
     });
 
-    it('drugi tim i dalje može riješiti zadatak', async () => {
-      await service.submit(1, CHALLENGE, FLAG);
+    it('ako rješenje nije evidentirano jer je istodobno stiglo drugo, vraća already_solved', async () => {
+      repo.recordSolution.mockResolvedValue(false);
 
-      await expect(service.submit(3, CHALLENGE, FLAG)).resolves.toMatchObject({
-        status: 'correct',
+      await expect(service.submit(1, CHALLENGE, FLAG)).resolves.toEqual({
+        status: 'already_solved',
+        challengeId: CHALLENGE,
       });
-      expect(repo.solutions.map((s) => s.teamId)).toEqual([1, 2]);
-    });
-
-    it('istodobne predaje članova istog tima daju točno jedno rješenje (NF-06)', async () => {
-      const members = [1, 2, 4, 5, 6].slice(0, MAX_ATTEMPTS);
-
-      const results = await Promise.all(
-        members.map((userId) => service.submit(userId, CHALLENGE, FLAG)),
-      );
-
-      expect(results.filter((r) => r.status === 'correct')).toHaveLength(1);
-      expect(results.filter((r) => r.status === 'already_solved')).toHaveLength(
-        members.length - 1,
-      );
-      expect(repo.solutions).toHaveLength(1);
     });
   });
 
   describe('pravila natjecanja', () => {
     it('za nepostojeći zadatak vraća 404', async () => {
+      repo.findChallenge.mockResolvedValue(undefined);
+
       await expect(service.submit(1, 999, FLAG)).rejects.toThrow(
         NotFoundException,
       );
     });
 
     it('za neobjavljen zadatak vraća 404 kao da ne postoji (F-010)', async () => {
-      repo.challenges.get(CHALLENGE)!.publishingDate = new Date(
-        '2026-11-04T13:00:00Z',
+      repo.findChallenge.mockResolvedValue({
+        id: CHALLENGE,
+        competitionId: 1,
+        flag: FLAG,
+        publishingDate: new Date('2026-11-04T13:00:00Z'),
+      });
+
+      await expect(service.submit(1, CHALLENGE, FLAG)).rejects.toThrow(
+        NotFoundException,
       );
+      expect(repo.findCompetition).not.toHaveBeenCalled();
+    });
+
+    it('za zadatak čije natjecanje ne postoji vraća 404', async () => {
+      repo.findCompetition.mockResolvedValue(undefined);
 
       await expect(service.submit(1, CHALLENGE, FLAG)).rejects.toThrow(
         NotFoundException,
@@ -170,7 +176,7 @@ describe('FlagSubmissionService', () => {
       ['prije početka', '2026-11-04T12:30:00Z', '2026-11-05T08:00:00Z'],
       ['nakon završetka', '2026-11-04T08:00:00Z', '2026-11-04T11:59:59Z'],
     ])('odbija predaju %s natjecanja', async (_label, startsAt, endsAt) => {
-      repo.competitions.set(1, {
+      repo.findCompetition.mockResolvedValue({
         id: 1,
         startsAt: new Date(startsAt),
         endsAt: new Date(endsAt),
@@ -179,23 +185,15 @@ describe('FlagSubmissionService', () => {
       await expect(service.submit(1, CHALLENGE, FLAG)).rejects.toThrow(
         ForbiddenException,
       );
-      expect(repo.solutions).toHaveLength(0);
+      expect(repo.recordSolution).not.toHaveBeenCalled();
     });
 
     it('odbija korisnika koji nije član tima u natjecanju', async () => {
       await expect(service.submit(99, CHALLENGE, FLAG)).rejects.toThrow(
         ForbiddenException,
       );
-    });
-
-    it('odbija korisnika kojem je članstvo u timu isteklo', async () => {
-      repo.memberships.find((m) => m.userId === 1)!.endsAt = new Date(
-        '2026-11-04T11:00:00Z',
-      );
-
-      await expect(service.submit(1, CHALLENGE, FLAG)).rejects.toThrow(
-        ForbiddenException,
-      );
+      expect(repo.hasTeamSolved).not.toHaveBeenCalled();
+      expect(repo.recordSolution).not.toHaveBeenCalled();
     });
   });
 
@@ -210,7 +208,7 @@ describe('FlagSubmissionService', () => {
       await failTimes(1, MAX_ATTEMPTS);
 
       expect(await statusOf(service.submit(1, CHALLENGE, FLAG))).toBe(429);
-      expect(repo.solutions).toHaveLength(0);
+      expect(repo.recordSolution).not.toHaveBeenCalled();
     });
 
     it('ograničenje vrijedi za cijeli tim, a ne samo za jednog korisnika', async () => {
@@ -238,13 +236,15 @@ describe('FlagSubmissionService', () => {
     });
 
     it('već riješen zadatak ne troši pokušaje', async () => {
-      await service.submit(1, CHALLENGE, FLAG);
-
+      repo.hasTeamSolved.mockResolvedValue(true);
       for (let i = 0; i < MAX_ATTEMPTS * 2; i++) {
-        await expect(service.submit(2, CHALLENGE, 'x')).resolves.toMatchObject({
-          status: 'already_solved',
-        });
+        await service.submit(2, CHALLENGE, 'x');
       }
+      repo.hasTeamSolved.mockResolvedValue(false);
+
+      await expect(service.submit(2, CHALLENGE, FLAG)).resolves.toMatchObject({
+        status: 'correct',
+      });
     });
   });
 

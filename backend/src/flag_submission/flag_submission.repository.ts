@@ -7,12 +7,43 @@ import {
   solutions,
   userTeamComp,
 } from '../database/schema.js';
-import {
-  FlagSubmissionRepository,
-  type ChallengeRecord,
-  type CompetitionWindow,
-  type SolutionRecord,
-} from './flag_submission.service.js';
+
+export interface ChallengeRecord {
+  id: number;
+  competitionId: number;
+  flag: string;
+  publishingDate: Date;
+}
+
+export interface CompetitionWindow {
+  id: number;
+  startsAt: Date;
+  endsAt: Date;
+}
+
+export interface SolutionRecord {
+  userId: number;
+  teamId: number;
+  competitionId: number;
+  challengeId: number;
+  solveTime: Date;
+}
+
+export abstract class FlagSubmissionRepository {
+  abstract findChallenge(id: number): Promise<ChallengeRecord | undefined>;
+
+  abstract findCompetition(id: number): Promise<CompetitionWindow | undefined>;
+
+  abstract findTeamId(
+    userId: number,
+    competitionId: number,
+    at: Date,
+  ): Promise<number | undefined>;
+
+  abstract hasTeamSolved(teamId: number, challengeId: number): Promise<boolean>;
+
+  abstract recordSolution(solution: SolutionRecord): Promise<boolean>;
+}
 
 type Executor = Pick<DatabaseService['db'], 'select'>;
 

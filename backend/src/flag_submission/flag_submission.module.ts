@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
 import { FlagSubmissionController } from './flag_submission.controller.js';
-import { DatabaseFlagSubmissionRepository } from './flag_submission.repository.js';
 import {
+  DatabaseFlagSubmissionRepository,
   FlagSubmissionRepository,
-  FlagSubmissionService,
-} from './flag_submission.service.js';
+} from './flag_submission.repository.js';
+import { FlagSubmissionService } from './flag_submission.service.js';
 
 @Module({
   imports: [AuthModule],

@@ -7,105 +7,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { FlagSubmissionRepository } from './flag_submission.repository.js';
 
 export type SubmissionStatus = 'correct' | 'incorrect' | 'already_solved';
 
 export interface SubmissionResult {
   status: SubmissionStatus;
   challengeId: number;
-}
-
-export interface ChallengeRecord {
-  id: number;
-  competitionId: number;
-  flag: string;
-  publishingDate: Date;
-}
-
-export interface CompetitionWindow {
-  id: number;
-  startsAt: Date;
-  endsAt: Date;
-}
-
-export interface TeamMembership {
-  userId: number;
-  teamId: number;
-  competitionId: number;
-  startsAt: Date;
-  endsAt?: Date;
-}
-
-export interface SolutionRecord {
-  userId: number;
-  teamId: number;
-  competitionId: number;
-  challengeId: number;
-  solveTime: Date;
-}
-
-export abstract class FlagSubmissionRepository {
-  abstract findChallenge(id: number): Promise<ChallengeRecord | undefined>;
-
-  abstract findCompetition(id: number): Promise<CompetitionWindow | undefined>;
-
-  abstract findTeamId(
-    userId: number,
-    competitionId: number,
-    at: Date,
-  ): Promise<number | undefined>;
-
-  abstract hasTeamSolved(teamId: number, challengeId: number): Promise<boolean>;
-
-  abstract recordSolution(solution: SolutionRecord): Promise<boolean>;
-}
-
-@Injectable()
-export class InMemoryFlagSubmissionRepository extends FlagSubmissionRepository {
-  readonly challenges = new Map<number, ChallengeRecord>();
-  readonly competitions = new Map<number, CompetitionWindow>();
-  readonly memberships: TeamMembership[] = [];
-  readonly solutions: SolutionRecord[] = [];
-
-  async findChallenge(id: number): Promise<ChallengeRecord | undefined> {
-    return this.challenges.get(id);
-  }
-
-  async findCompetition(id: number): Promise<CompetitionWindow | undefined> {
-    return this.competitions.get(id);
-  }
-
-  async findTeamId(
-    userId: number,
-    competitionId: number,
-    at: Date,
-  ): Promise<number | undefined> {
-    return this.memberships.find(
-      (m) =>
-        m.userId === userId &&
-        m.competitionId === competitionId &&
-        m.startsAt <= at &&
-        (m.endsAt === undefined || m.endsAt > at),
-    )?.teamId;
-  }
-
-  async hasTeamSolved(teamId: number, challengeId: number): Promise<boolean> {
-    return this.solutions.some(
-      (s) => s.teamId === teamId && s.challengeId === challengeId,
-    );
-  }
-
-  async recordSolution(solution: SolutionRecord): Promise<boolean> {
-    const alreadySolved = this.solutions.some(
-      (s) =>
-        s.teamId === solution.teamId && s.challengeId === solution.challengeId,
-    );
-    if (alreadySolved) {
-      return false;
-    }
-    this.solutions.push(solution);
-    return true;
-  }
 }
 
 class AttemptLimiter {
