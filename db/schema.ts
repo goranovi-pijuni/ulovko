@@ -1,5 +1,6 @@
 import {
   pgTable,
+  pgEnum,
   integer,
   text,
   timestamp,
@@ -7,18 +8,12 @@ import {
   primaryKey,
   index,
   check,
-  customType,
-  foreignKey,
+  bytea,
   serial,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
+import { defineRelations, sql } from "drizzle-orm";
 
-// Drizzle ORM 0.45 does not export bytea from pg-core; use PostgreSQL's native type.
-const bytea = customType<{ data: Buffer }>({
-  dataType() {
-    return 'bytea';
-  },
-});
+export const statusEnum = pgEnum('status', ['uploaded', 'building', 'built', 'deployed', 'error']);
 
 export const users = pgTable(
   "Users",
@@ -96,8 +91,13 @@ export const challenges = pgTable("Challenges", {
   challengeTitle: text("challengeTitle").notNull(),
   challengeDescription: text("challengeDescription"),
   publishingDate: timestamp("publishingDate").notNull(),
+  isPublic: boolean("isPublic").notNull(),
+  hasHandout: boolean("hasHandout").notNull(),
   flag: text("flag").notNull(),
   points: integer("points"),
+  deployId: integer("deployId")
+    .unique()
+    .references(() => deployments.id),
   competitionId: integer("competitionId")
     .notNull()
     .references(() => competitions.id),
@@ -115,14 +115,14 @@ export const userTeamComp = pgTable(
   "UserTeamComp",
   {
     userId: integer("userId")
-      .notNull()
-      .references(() => users.id),
+    .notNull()
+    .references(() => users.id),
     teamId: integer("teamId")
-      .notNull()
-      .references(() => teams.id),
+    .notNull()
+    .references(() => teams.id),
     compId: integer("compId")
-      .notNull()
-      .references(() => competitions.id),
+    .notNull()
+    .references(() => competitions.id),
     participationStartTime: integer("participationStartTime").notNull(),
     participationEndTime: integer("participationEndTime"),
   },
@@ -139,17 +139,38 @@ export const solutions = pgTable(
   "Solutions",
   {
     userId: integer("userId")
-      .notNull()
-      .references(() => users.id),
+    .notNull()
+    .references(() => users.id),
     compId: integer("compId")
-      .notNull()
-      .references(() => competitions.id),
+    .notNull()
+    .references(() => competitions.id),
     challengeId: integer("challengeId")
-      .notNull()
-      .references(() => challenges.id),
+    .notNull()
+    .references(() => challenges.id),
     solveTime: timestamp("solveTime").notNull(),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.compId, table.challengeId] }),
   ]
+);
+
+export const deployments = pgTable(
+  "Deployments",
+  {
+    id: serial("id").primaryKey(),
+    status: statusEnum("status").notNull(),
+    buildId: text("buildId"),
+    latestError: text("latestError")
+  }
+);
+
+export const deploymentsRelations = defineRelations(
+  {challenges, deployments}, (r) => ({
+    deployments: {
+      challenges: r.one.challenges({
+        from: r.deployments.id,
+        to: r.challenges.deployId,
+      })
+    }
+  })
 );
