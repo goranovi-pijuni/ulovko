@@ -6,16 +6,16 @@ from kubernetes.client.exceptions import ApiException
 from pydantic import BaseModel, ConfigDict, Field
 
 from runner.kube import get_app, get_k8s, get_networking
-from runner.services.identifiers import (
-    canonical_competition_id,
-    canonical_task_id,
-)
 from runner.services.deployer import (
     DeploymentConflict,
     DeploymentError,
     ImageImportError,
     delete_challenge,
     deploy_challenge,
+)
+from runner.services.identifiers import (
+    canonical_competition_id,
+    canonical_task_id,
 )
 
 router = APIRouter(prefix="/challenges", tags=["challenges"])

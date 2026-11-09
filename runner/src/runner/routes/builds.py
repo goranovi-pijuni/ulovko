@@ -2,14 +2,14 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from runner.services.identifiers import (
-    canonical_competition_id,
-    canonical_task_id,
-)
 from runner.services.build_jobs import (
     get_job,
     read_log,
     submit_job,
+)
+from runner.services.identifiers import (
+    canonical_competition_id,
+    canonical_task_id,
 )
 
 router = APIRouter(prefix="/builds", tags=["builds"])
