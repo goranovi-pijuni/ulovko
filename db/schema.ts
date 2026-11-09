@@ -11,8 +11,7 @@ import {
   customType,
   serial,
 } from "drizzle-orm/pg-core";
-import { sql } from "drizzle-orm";
-import { relations } from "drizzle-orm/_relations";
+import { sql, relations } from "drizzle-orm";
 
 export const statusEnum = pgEnum('status', ['uploaded', 'building', 'built', 'deployed', 'error']);
 
