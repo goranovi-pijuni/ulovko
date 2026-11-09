@@ -91,8 +91,8 @@ export const challenges = pgTable("Challenges", {
   challengeTitle: text("challengeTitle").notNull(),
   challengeDescription: text("challengeDescription"),
   publishingDate: timestamp("publishingDate").notNull(),
-  isPublic: boolean("isPublic").notNull(),
-  hasHandout: boolean("hasHandout").notNull(),
+  isPublic: boolean("isPublic").notNull().default(false),
+  hasHandout: boolean("hasHandout").notNull().default(false),
   flag: text("flag").notNull(),
   points: integer("points"),
   deployId: integer("deployId")
@@ -170,6 +170,7 @@ export const deploymentsRelations = defineRelations(
       challenges: r.one.challenges({
         from: r.deployments.id,
         to: r.challenges.deployId,
+        optional: true
       })
     }
   })
