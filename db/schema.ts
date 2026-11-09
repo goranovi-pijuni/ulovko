@@ -8,12 +8,19 @@ import {
   primaryKey,
   index,
   check,
-  bytea,
+  customType,
   serial,
 } from "drizzle-orm/pg-core";
 import { defineRelations, sql } from "drizzle-orm";
 
 export const statusEnum = pgEnum('status', ['uploaded', 'building', 'built', 'deployed', 'error']);
+
+// Drizzle ORM 0.45 does not export bytea from pg-core; use PostgreSQL's native type.
+const bytea = customType<{ data: Buffer }>({
+  dataType() {
+    return 'bytea';
+  },
+});
 
 export const users = pgTable(
   "Users",
@@ -170,7 +177,6 @@ export const deploymentsRelations = defineRelations(
       challenges: r.one.challenges({
         from: r.deployments.id,
         to: r.challenges.deployId,
-        optional: true
       })
     }
   })
