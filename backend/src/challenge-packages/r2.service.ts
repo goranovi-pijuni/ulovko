@@ -1,12 +1,19 @@
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadGatewayException,
+  Injectable,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import {
   CreateBucketCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { createReadStream } from 'node:fs';
+import { Readable } from 'node:stream';
 import { stat } from 'node:fs/promises';
 import type { PreparedPackage } from './archive.service.js';
 
@@ -97,6 +104,44 @@ export class R2Service {
       await this.cleanup(bucket, uploaded);
       throw error;
     }
+  }
+
+  // Called only after the competition service has authorized access. Never
+  // expose R2 URLs or credentials to the caller; stream via the API instead.
+  async readHandout(
+    competitionId: number,
+    challengeId: number,
+  ): Promise<{ stream: Readable; length?: number }> {
+    const bucket = competitionBucket(competitionId);
+    const key = `${challengeId}/public.zip`;
+    let result;
+    try {
+      result = await this.s3.send(
+        new GetObjectCommand({ Bucket: bucket, Key: key }),
+      );
+    } catch (error) {
+      if (error instanceof ServiceUnavailableException) throw error;
+      const s3Error = error as {
+        name?: string;
+        $metadata?: { httpStatusCode?: number };
+      };
+      if (
+        s3Error.name === 'NoSuchKey' ||
+        s3Error.name === 'NoSuchBucket' ||
+        s3Error.name === 'NotFound' ||
+        s3Error.$metadata?.httpStatusCode === 404
+      ) {
+        throw new NotFoundException('Handout nije pronađen u pohrani');
+      }
+      throw new BadGatewayException('Preuzimanje handouta iz R2 nije uspjelo');
+    }
+    if (!(result.Body instanceof Readable)) {
+      throw new BadGatewayException('R2 nije vratio valjanu datoteku');
+    }
+    return {
+      stream: result.Body,
+      length: result.ContentLength,
+    };
   }
 
   async cleanup(bucket: string, keys: string[]): Promise<void> {

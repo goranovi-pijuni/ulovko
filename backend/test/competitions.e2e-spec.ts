@@ -33,6 +33,7 @@ describe('Competitions API authorization', () => {
     listChallenges: vi.fn().mockResolvedValue([]),
     createCompetition,
     uploadChallenge,
+    downloadHandout: vi.fn(),
   };
   const selectChain = { from: vi.fn(), where: vi.fn(), limit: vi.fn() };
 
@@ -143,6 +144,40 @@ describe('Competitions API authorization', () => {
       .send({ ...validCompetition, startsAt: 'not a date' })
       .expect(400);
     expect(createCompetition).not.toHaveBeenCalled();
+  });
+
+  it('requires a Google-backed session before fetching handouts', async () => {
+    await request(app.getHttpServer())
+      .get('/api/competitions/1/2/handout')
+      .expect(401);
+    expect(service.downloadHandout).not.toHaveBeenCalled();
+  });
+
+  it('proxies a handout ZIP for authenticated users', async () => {
+    const { StreamableFile } = await import('@nestjs/common');
+    const { Readable } = await import('node:stream');
+    service.downloadHandout.mockResolvedValueOnce(
+      new StreamableFile(Readable.from([Buffer.from('ZIP')]), {
+        type: 'application/zip',
+        disposition: 'attachment; filename="challenge-2-handout.zip"',
+        length: 3,
+      }),
+    );
+    const response = await request(app.getHttpServer())
+      .get('/api/competitions/1/2/handout')
+      .set('x-test-role', 'user')
+      .expect(200);
+    expect(response.headers['content-type']).toMatch(/application\/zip/);
+    expect(response.headers['content-disposition']).toBe(
+      'attachment; filename="challenge-2-handout.zip"',
+    );
+    expect(response.headers['cache-control']).toBe('private, no-store');
+    expect(response.headers['x-content-type-options']).toBe('nosniff');
+    expect(service.downloadHandout).toHaveBeenCalledWith(
+      1,
+      2,
+      expect.objectContaining({ id: 7 }),
+    );
   });
 
   it('rejects unauthenticated and normal users uploading challenges before Multer', async () => {
