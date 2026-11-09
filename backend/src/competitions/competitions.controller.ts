@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Header,
   HttpCode,
   HttpStatus,
   NotFoundException,
@@ -106,6 +107,38 @@ export class CompetitionsController {
   @ApiOperation({ summary: 'Popis zadataka natjecanja, bez zastavica' })
   listChallenges(@Param('id', ParseIntPipe) id: number) {
     return this.competitionsService.listChallenges(id);
+  }
+
+  @Get(':compId/:taskId/handout')
+  @UseGuards(AuthenticatedGuard)
+  @ApiCookieAuth('session')
+  @ApiOperation({ summary: 'Preuzimanje ZIP handouta zadatka preko API-ja' })
+  @ApiParam({ name: 'compId', type: Number, description: 'ID natjecanja' })
+  @ApiParam({ name: 'taskId', type: Number, description: 'ID zadatka' })
+  @ApiOkResponse({
+    description: 'ZIP arhiva (application/zip, attachment)',
+    content: {
+      'application/zip': { schema: { type: 'string', format: 'binary' } },
+    },
+  })
+  @ApiUnauthorizedResponse({ description: 'Potrebna je prijava putem Googlea' })
+  @ApiForbiddenResponse({ description: 'Korisnik nije sudionik natjecanja' })
+  @ApiNotFoundResponse({
+    description: 'Zadatak ne postoji, nije objavljen ili nema handout',
+  })
+  @ApiBadRequestResponse({ description: 'Neispravan ID' })
+  @Header('Cache-Control', 'private, no-store')
+  @Header('X-Content-Type-Options', 'nosniff')
+  downloadHandout(
+    @Param('compId', ParseIntPipe) compId: number,
+    @Param('taskId', ParseIntPipe) taskId: number,
+    @Req() request: Request,
+  ) {
+    return this.competitionsService.downloadHandout(
+      compId,
+      taskId,
+      request.user!,
+    );
   }
 
   @Post(':competitionId/challenges')

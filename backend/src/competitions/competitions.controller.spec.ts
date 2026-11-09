@@ -30,6 +30,7 @@ describe('CompetitionsController', () => {
     uploadChallenge: vi.fn(),
     createCompetition: vi.fn(),
     listChallenges: vi.fn(),
+    downloadHandout: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -85,6 +86,16 @@ describe('CompetitionsController', () => {
       expect.objectContaining({ name: 'FER CTF' }),
       23,
     );
+  });
+
+  it('should delegate handout retrieval with the session user', async () => {
+    const user = { id: 23, permLevel: 1 };
+    const stream = { file: true };
+    mockService.downloadHandout.mockResolvedValue(stream);
+    await expect(
+      controller.downloadHandout(1, 2, { user } as Request),
+    ).resolves.toBe(stream);
+    expect(mockService.downloadHandout).toHaveBeenCalledWith(1, 2, user);
   });
 
   it('should list challenge metadata', async () => {

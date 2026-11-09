@@ -4,8 +4,18 @@ import {
   Logger,
   NotFoundException,
   ServiceUnavailableException,
+  ForbiddenException,
+  StreamableFile,
 } from '@nestjs/common';
-import { and, countDistinct, eq, lte, sql, type SQL } from 'drizzle-orm';
+import {
+  and,
+  countDistinct,
+  eq,
+  isNull,
+  lte,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 import { unlink } from 'node:fs/promises';
 import { DatabaseService } from '../database/database.service.js';
 import {
@@ -14,6 +24,8 @@ import {
   competitions,
   userTeamComp,
 } from '../database/schema.js';
+import { Role } from '../roles/roles.enum.js';
+import type { User } from '../users/interfaces/user.interface.js';
 import { ArchiveService } from '../challenge-packages/archive.service.js';
 import { R2Service } from '../challenge-packages/r2.service.js';
 import type {
@@ -176,6 +188,84 @@ export class CompetitionsService {
         ),
       )
       .orderBy(challenges.publishingDate);
+  }
+
+  async downloadHandout(
+    competitionId: number,
+    challengeId: number,
+    user: User,
+  ): Promise<StreamableFile> {
+    // PostgreSQL serial IDs fit into signed 32-bit integers. ParseIntPipe
+    // accepts negative IDs, so reject them before querying the database.
+    for (const id of [competitionId, challengeId]) {
+      if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) {
+        throw new BadRequestException('Neispravan ID natjecanja ili zadatka');
+      }
+    }
+
+    const [challenge] = await this.database.db
+      .select({
+        challengeId: challenges.id,
+        hasHandout: challenges.hasHandout,
+        isPublic: challenges.isPublic,
+        publishingDate: challenges.publishingDate,
+        compStart: competitions.compStart,
+        organizedBy: competitions.organizedBy,
+      })
+      .from(challenges)
+      .innerJoin(competitions, eq(challenges.competitionId, competitions.id))
+      .where(
+        and(eq(challenges.id, challengeId), eq(competitions.id, competitionId)),
+      )
+      .limit(1);
+
+    // A task belonging to another competition is indistinguishable from a
+    // missing task. Do not probe R2 for either case.
+    if (!challenge) {
+      throw new NotFoundException('Zadatak nije pronađen u natjecanju');
+    }
+
+    const privileged =
+      user.permLevel === Role.ADMIN ||
+      (user.permLevel === Role.ORGANIZER && challenge.organizedBy === user.id);
+
+    if (!privileged) {
+      const [participant] = await this.database.db
+        .select({ userId: userTeamComp.userId })
+        .from(userTeamComp)
+        .where(
+          and(
+            eq(userTeamComp.userId, user.id),
+            eq(userTeamComp.compId, competitionId),
+          ),
+        )
+        .limit(1);
+      if (!participant) {
+        throw new ForbiddenException('Niste prijavljeni na ovo natjecanje');
+      }
+      const now = new Date();
+      if (
+        !challenge.isPublic ||
+        now < challenge.compStart ||
+        now < challenge.publishingDate
+      ) {
+        throw new NotFoundException('Zadatak još nije dostupan');
+      }
+    }
+
+    if (!challenge.hasHandout) {
+      throw new NotFoundException('Zadatak nema handout');
+    }
+
+    const { stream, length } = await this.r2.readHandout(
+      competitionId,
+      challengeId,
+    );
+    return new StreamableFile(stream, {
+      type: 'application/zip',
+      disposition: `attachment; filename="challenge-${challengeId}-handout.zip"`,
+      length,
+    });
   }
 
   async uploadChallenge(
