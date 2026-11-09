@@ -18,7 +18,7 @@ jobs:
 
     environment:
       name: production
-      url: https://api.ulovko.fun/api
+      url: https://ulovko.fun/api
 
     concurrency:
       group: ulovko-backend-production
@@ -53,6 +53,23 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Open PostgreSQL tunnel
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          ssh -f -N \
+            -i "$HOME/.ssh/id_ed25519" \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ExitOnForwardFailure=yes \
+            -L 15432:127.0.0.1:5432 \
+            "deploy@${HOST}"
+
+      - name: Apply database changes
+        env:
+          DATABASE_URL: ${{ secrets.DB_MIGRATION_URL }}
+        run: npm run db:push
+
       - name: Upload build to VPS
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
@@ -69,11 +86,43 @@ jobs:
       - name: Upload application environment
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
-          APP_ENV: ${{ secrets.APP_ENV }}
+          DB_APP_URL: ${{ secrets.DB_APP_URL }}
+          R2_ENDPOINT_URL: ${{ vars.R2_ENDPOINT_URL }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           RUNNER_API_TOKEN: ${{ secrets.RUNNER_API_TOKEN }}
           RUNNER_API_URL: ${{ vars.RUNNER_API_URL }}
+          GOOGLE_CLIENT_ID: ${{ vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_CALLBACK_URL: ${{ vars.GOOGLE_CALLBACK_URL }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         run: |
-          test -n "$APP_ENV" && test -n "$RUNNER_API_TOKEN" && test -n "$RUNNER_API_URL"
+          test -n "$DB_APP_URL" && test -n "$RUNNER_API_TOKEN" && test -n "$RUNNER_API_URL"
+          test -n "$GOOGLE_CLIENT_ID" && test -n "$GOOGLE_CLIENT_SECRET"
+          test -n "$GOOGLE_CALLBACK_URL" && test -n "$SESSION_SECRET"
+          test "${#SESSION_SECRET}" -ge 32 || { echo 'SESSION_SECRET must be at least 32 characters.' >&2; exit 1; }
+          [[ "$GOOGLE_CALLBACK_URL" == 'https://ulovko.fun/api/auth/google/callback' ]] || {
+            echo 'GOOGLE_CALLBACK_URL must match the configured Google OAuth redirect.' >&2
+            exit 1
+          }
+          for value in "$GOOGLE_CLIENT_ID" "$GOOGLE_CLIENT_SECRET" "$GOOGLE_CALLBACK_URL" "$SESSION_SECRET"; do
+            [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || {
+              echo 'Google and session settings must be single-line values.' >&2
+              exit 1
+            }
+          done
+          test -n "$R2_ENDPOINT_URL" && test -n "$R2_ACCESS_KEY_ID" && test -n "$R2_SECRET_ACCESS_KEY"
+          for item in "$R2_ENDPOINT_URL" "$R2_ACCESS_KEY_ID" "$R2_SECRET_ACCESS_KEY"; do
+            [[ "$item" != *$'\n'* && "$item" != *$'\r'* ]] || exit 1
+          done
+          [[ "$DB_APP_URL" == postgresql://* || "$DB_APP_URL" == postgres://* ]] || {
+            echo 'DB_APP_URL must be a PostgreSQL connection URL.' >&2
+            exit 1
+          }
+          [[ "$DB_APP_URL" != *$'\n'* && "$DB_APP_URL" != *$'\r'* ]] || {
+            echo 'DB_APP_URL must fit on a single line.' >&2
+            exit 1
+          }
           [[ "$RUNNER_API_TOKEN" =~ ^[A-Za-z0-9_-]{32,}$ ]] || exit 1
           [[ "$RUNNER_API_URL" =~ ^https?://[a-zA-Z0-9.:-]+/?$ ]] || {
             echo 'RUNNER_API_URL must be a trusted HTTP(S) host and optional port.' >&2
@@ -84,19 +133,20 @@ jobs:
           env_file="$(mktemp)"
           trap 'rm -f "$env_file"' EXIT
 
-          # The GitHub secret contains all other application environment values.
-          # Reserve the shared runner credentials for dedicated GitHub settings.
-          if [[ -n "$APP_ENV" ]]; then
-            printf '%s\n' "$APP_ENV" > "$env_file"
-            if grep -Eq '^[[:space:]]*(RUNNER_API_TOKEN|RUNNER_API_URL)[[:space:]]*=' "$env_file"; then
-              echo 'APP_ENV must not redefine RUNNER_API_TOKEN or RUNNER_API_URL.' >&2
-              exit 1
-            fi
-          fi
+          # Build the backend environment from dedicated Actions secrets/variables.
           {
+            printf 'NODE_ENV=production\nPORT=3000\n'
+            printf 'DATABASE_URL=%s\n' "$DB_APP_URL"
+            printf 'R2_ENDPOINT_URL=%s\n' "$R2_ENDPOINT_URL"
+            printf 'R2_ACCESS_KEY_ID=%s\n' "$R2_ACCESS_KEY_ID"
+            printf 'R2_SECRET_ACCESS_KEY=%s\n' "$R2_SECRET_ACCESS_KEY"
             printf 'RUNNER_API_TOKEN=%s\n' "$RUNNER_API_TOKEN"
             printf 'RUNNER_API_URL=%s\n' "$RUNNER_API_URL"
-          } >> "$env_file"
+            printf 'GOOGLE_CLIENT_ID=%s\n' "$GOOGLE_CLIENT_ID"
+            printf 'GOOGLE_CLIENT_SECRET=%s\n' "$GOOGLE_CLIENT_SECRET"
+            printf 'GOOGLE_CALLBACK_URL=%s\n' "$GOOGLE_CALLBACK_URL"
+            printf 'SESSION_SECRET=%s\n' "$SESSION_SECRET"
+          } > "$env_file"
 
           SSH="ssh -i $HOME/.ssh/id_ed25519 -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes"
           rsync -az -e "$SSH" "$env_file" \

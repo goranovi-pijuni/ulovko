@@ -1,16 +1,40 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module.js';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import session from 'express-session';
+import passport from 'passport';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  app.enableShutdownHooks();
   app.setGlobalPrefix('api');
+
+  // Only Caddy on localhost may supply forwarded HTTPS information.
+  app.getHttpAdapter().getInstance().set('trust proxy', 'loopback');
+
+  app.use(
+    session({
+      secret: process.env.SESSION_SECRET!,
+      saveUninitialized: false,
+      resave: false,
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 1000,
+      },
+    }),
+  );
+
+  app.use(passport.initialize());
+  app.use(passport.session());
 
   const config = new DocumentBuilder()
     .setTitle('Ulovko API')
     .setDescription('API za Ulovko CTF platformu')
     .setVersion('1.0')
+    .addCookieAuth('connect.sid', { type: 'apiKey', in: 'cookie' }, 'session')
     .build();
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
