@@ -1,11 +1,15 @@
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from runner.services.build_jobs import (
     get_job,
     read_log,
     submit_job,
+)
+from runner.services.identifiers import (
+    canonical_competition_id,
+    canonical_task_id,
 )
 
 router = APIRouter(prefix="/builds", tags=["builds"])
@@ -15,11 +19,21 @@ class CreateBuildRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
     competition_id: str = Field(
-        min_length=3, max_length=63, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
+        min_length=1, max_length=63, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
     )
     task_id: str = Field(
         min_length=1, max_length=63, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
     )
+
+    @field_validator("competition_id")
+    @classmethod
+    def normalize_competition_id(cls, value: str) -> str:
+        return canonical_competition_id(value)
+
+    @field_validator("task_id")
+    @classmethod
+    def normalize_task_id(cls, value: str) -> str:
+        return canonical_task_id(value)
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)

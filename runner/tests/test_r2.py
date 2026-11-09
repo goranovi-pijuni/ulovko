@@ -154,3 +154,28 @@ def test_s3_credentials_from_environment(monkeypatch):
     assert args["region_name"] == "auto"
     assert args["aws_access_key_id"] == "my-id"
     assert args["aws_secret_access_key"] == "my-secret"
+
+
+def test_numeric_competition_id_uses_backend_bucket_name(tmp_path: Path):
+    source = fake_r2()
+    root = tmp_path / "package"
+    parsed = r2.fetch_challenge("1", "task1", root, client=source)
+    assert "web1" in parsed.services
+    assert source.calls == [
+        ("001", "task1/config.yaml"),
+        ("001", "task1/deploy.zip"),
+    ]
+
+
+def test_numeric_challenge_id_uses_unpadded_object_prefix(tmp_path: Path):
+    source = FakeR2({"4/config.yaml": CONFIG, "4/deploy.zip": GOOD_ZIP})
+    parsed = r2.fetch_challenge("001", "004", tmp_path / "package", client=source)
+    assert "web1" in parsed.services
+    assert source.calls == [("001", "4/config.yaml"), ("001", "4/deploy.zip")]
+
+
+def test_invalid_numeric_competition_id(tmp_path: Path):
+    source = fake_r2()
+    with pytest.raises(ValueError):
+        r2.fetch_challenge("0", "task1", tmp_path / "package", client=source)
+    assert source.calls == []

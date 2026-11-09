@@ -147,3 +147,21 @@ def test_r2_failure_is_reported_as_failed_job(demo: TestClient, monkeypatch):
     response = demo.get(f"/builds/{job['build_id']}").json()
     assert response["status"] == "failed"
     assert "NoSuchKey" in response["error"]
+
+
+def test_numeric_ids_are_canonicalized_at_api_boundary(demo: TestClient):
+    response = demo.post(
+        "/builds", json={"competition_id": "001", "task_id": "0004"}
+    )
+    assert response.status_code == 202
+    created = response.json()
+    assert created["competition_id"] == "1"
+    assert created["task_id"] == "4"
+
+
+def test_single_digit_competition_id_is_accepted(demo: TestClient):
+    response = demo.post(
+        "/builds", json={"competition_id": "1", "task_id": "4"}
+    )
+    assert response.status_code == 202
+    assert response.json()["competition_id"] == "1"

@@ -2,6 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from kubernetes import client
 
 from runner.kube import get_app, get_k8s, get_networking
+from runner.services.identifiers import (
+    canonical_competition_id,
+    canonical_task_id,
+)
 from runner.services.inventory import _challenge_details, _inventory, _summary
 
 router = APIRouter(prefix="/challenges", tags=["challenges"])
@@ -44,6 +48,10 @@ def get_competition(
     competition_id: str,
     apps: client.AppsV1Api = Depends(get_app),
 ):
+    try:
+        competition_id = canonical_competition_id(competition_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     challenges = [
         ch for ch in _inventory(apps) if ch["competition_id"] == competition_id
     ]
@@ -65,6 +73,11 @@ def get_challenge(
     core: client.CoreV1Api = Depends(get_k8s),
     networking: client.NetworkingV1Api = Depends(get_networking),
 ):
+    try:
+        competition_id = canonical_competition_id(competition_id)
+        task_id = canonical_task_id(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     challenge = next(
         (
             ch
