@@ -11,7 +11,8 @@ import {
   customType,
   serial,
 } from "drizzle-orm/pg-core";
-import { defineRelations, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
+import { relations } from "drizzle-orm/_relations";
 
 export const statusEnum = pgEnum('status', ['uploaded', 'building', 'built', 'deployed', 'error']);
 
@@ -171,13 +172,10 @@ export const deployments = pgTable(
   }
 );
 
-export const deploymentsRelations = defineRelations(
-  {challenges, deployments}, (r) => ({
-    deployments: {
-      challenges: r.one.challenges({
-        from: r.deployments.id,
-        to: r.challenges.deployId,
-      })
-    }
+export const deploymentsRelations = relations(deployments, ({ one }) => ({
+    challenges: one(challenges, {
+      fields: [deployments.id],
+      references: [challenges.deployId]
+    })
   })
 );
