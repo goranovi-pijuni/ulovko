@@ -1,5 +1,4 @@
 import os
-import re
 import stat
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -8,14 +7,16 @@ from zipfile import BadZipFile, ZipFile
 import boto3
 from botocore.config import Config
 
+from runner.services.identifiers import (
+    canonical_task_id,
+    competition_bucket,
+)
 from runner.services.package import (
     ChallengeConfig,
     parse_config,
     resolve_build_contexts,
 )
 
-BUCKET_NAME = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\Z")
-CHALLENGE_ID = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\Z")
 MAX_CONFIG_BYTES = 1024 * 1024
 MAX_ZIP_BYTES = 256 * 1024 * 1024
 MAX_EXTRACTED_BYTES = 512 * 1024 * 1024
@@ -151,17 +152,15 @@ def fetch_challenge(
     `task_id` is the challenge ID used in R2 object keys. No credentials or
     filesystem paths are accepted from API requests.
     """
-    if not (3 <= len(competition_id) <= 63 and BUCKET_NAME.fullmatch(competition_id)):
-        raise ValueError("competition_id is not a valid R2 bucket name")
-    if not (1 <= len(task_id) <= 63 and CHALLENGE_ID.fullmatch(task_id)):
-        raise ValueError("Invalid task_id")
+    bucket = competition_bucket(competition_id)
+    task_id = canonical_task_id(task_id)
 
     r2 = client if client is not None else create_r2_client()
     destination.mkdir(mode=0o700, parents=False, exist_ok=False)
     prefix = f"{task_id}/"
     _download_object(
         r2,
-        competition_id,
+        bucket,
         prefix + "config.yaml",
         destination / "config.yaml",
         MAX_CONFIG_BYTES,
@@ -170,7 +169,7 @@ def fetch_challenge(
     archive = destination / "deploy.zip"
     try:
         _download_object(
-            r2, competition_id, prefix + "deploy.zip", archive, MAX_ZIP_BYTES
+            r2, bucket, prefix + "deploy.zip", archive, MAX_ZIP_BYTES
         )
         _extract_deploy(archive, destination)
         resolve_build_contexts(destination, config)

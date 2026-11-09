@@ -6,6 +6,10 @@ from kubernetes.client.exceptions import ApiException
 from pydantic import BaseModel, ConfigDict, Field
 
 from runner.kube import get_app, get_k8s, get_networking
+from runner.services.identifiers import (
+    canonical_competition_id,
+    canonical_task_id,
+)
 from runner.services.deployer import (
     DeploymentConflict,
     DeploymentError,
@@ -17,7 +21,7 @@ from runner.services.deployer import (
 router = APIRouter(prefix="/challenges", tags=["challenges"])
 
 CompetitionId = Annotated[
-    str, Path(min_length=3, max_length=63, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
+    str, Path(min_length=1, max_length=63, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
 ]
 TaskId = Annotated[
     str, Path(min_length=1, max_length=63, pattern=r"^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$")
@@ -39,6 +43,11 @@ def deploy(
     core: Annotated[client.CoreV1Api, Depends(get_k8s)],
     networking: Annotated[client.NetworkingV1Api, Depends(get_networking)],
 ):
+    try:
+        competition_id = canonical_competition_id(competition_id)
+        task_id = canonical_task_id(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         return deploy_challenge(
             competition_id, task_id, body.build_id, apps, core, networking
@@ -62,6 +71,11 @@ def undeploy(
     task_id: TaskId,
     core: Annotated[client.CoreV1Api, Depends(get_k8s)],
 ):
+    try:
+        competition_id = canonical_competition_id(competition_id)
+        task_id = canonical_task_id(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     try:
         result = delete_challenge(competition_id, task_id, core)
     except ApiException as exc:
