@@ -100,6 +100,7 @@ export const challenges = pgTable("Challenges", {
   publishingDate: timestamp("publishingDate").notNull(),
   isPublic: boolean("isPublic").notNull().default(false),
   hasHandout: boolean("hasHandout").notNull().default(false),
+  hasDeploy: boolean("hasDeploy").notNull().default(false),
   flag: text("flag").notNull(),
   points: integer("points"),
   deployId: integer("deployId")

@@ -187,6 +187,7 @@ describe('Competition upload validation ordering', () => {
         service.uploadChallenge(1, { path } as Express.Multer.File, {
           challengeTitle: 'Test',
           publishingDate: '2026-11-05T12:00:00Z',
+          isPublic: true,
           flag: 'FLAG{test}',
           categoryId: '1',
         }),
@@ -253,6 +254,7 @@ describe('Challenge storage with existing database schema', () => {
         {
           challengeTitle: 'Test',
           publishingDate: '2026-11-05T12:00:00Z',
+          isPublic: true,
           flag: 'FLAG{test}',
           categoryId: '1',
         },
