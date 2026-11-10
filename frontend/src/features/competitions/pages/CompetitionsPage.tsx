@@ -7,8 +7,7 @@ import { useCompetitions } from '../api';
 import { CompetitionCard } from '../components/CompetitionCard';
 import type { Competition, CompetitionStatus } from '../types';
 
-// Active competitions come first, then upcoming; finished ones are listed in
-// their own section below.
+// Active competitions come first, then upcoming; finished ones are listed in their own section below.
 const statusOrder: Record<CompetitionStatus, number> = {
   active: 0,
   upcoming: 1,

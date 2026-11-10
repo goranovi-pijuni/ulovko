@@ -38,6 +38,7 @@ function AuthButtons() {
   );
 }
 
+// I will replace the ULOVKO text with a logo when I make one
 export function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 

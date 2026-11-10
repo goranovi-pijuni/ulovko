@@ -4,34 +4,25 @@ React + TypeScript + Vite SPA za natjecateljsko, organizacijsko i administracijs
 
 ## Pokretanje
 
-Potrebni su Node.js 22 ili noviji te pnpm u verziji navedenoj u `package.json` (`packageManager`).
+Potreban je samo Node.js 22 ili noviji (npm dolazi uz njega), kao i za backend.
 
 1. Instalirati Node.js LTS s [nodejs.org](https://nodejs.org/) (na Windowsima i `winget install OpenJS.NodeJS.LTS`).
-2. Instalirati pnpm putem npm-a, u točnoj verziji iz `package.json` (na Windowsima ne traži administratorska prava):
-
-   ```bash
-   npm install -g pnpm@11.28.9
-   ```
-
-3. Instalirati ovisnosti i pokrenuti razvojni poslužitelj:
+2. Instalirati ovisnosti i pokrenuti razvojni poslužitelj:
 
    ```bash
    cd frontend
-   pnpm install --frozen-lockfile
-   pnpm dev
+   npm ci
+   npm run dev
    ```
-
-Napomene:
-
-- Ne koristiti `corepack enable` — na Windowsima traži administratorska prava, a novije verzije Node.js-a više ne uključuju Corepack.
-- Ne koristiti samostalni pnpm instalacijski program — starije verzije ne mogu se prebaciti na pnpm 11.
-- Ne pokretati `npm install` u ovoj mapi; jedini lockfile je `pnpm-lock.yaml`.
-- `pnpm-workspace.yaml` dopušta instalacijsku skriptu paketa `esbuild` (potrebna Viteu) i mora ostati u repozitoriju.
-- Pri promjeni verzije pnpm-a ažurirati `packageManager` u `package.json` i naredbu u koraku 2.
 
 Razvojni poslužitelj radi na `http://localhost:5173` i prosljeđuje `/api` na backend (`http://localhost:3000`).
 
-Ostale naredbe: `pnpm build`, `pnpm typecheck`, `pnpm lint`, `pnpm format`.
+Ostale naredbe: `npm run build`, `npm run typecheck`, `npm run lint`, `npm run format`, `npm run format:check`.
+
+Napomene:
+
+- `npm install` koristiti samo pri dodavanju ili nadogradnji paketa i zatim commitati promijenjeni `package-lock.json`.
+- `allowScripts` u `package.json` dopušta instalacijsku skriptu paketa `esbuild` (koristi ga Vite).
 
 ## Struktura
 
@@ -60,4 +51,4 @@ src/
 
 Svaka nova funkcionalnost slijedi uzorak iz `features/competitions`: tipovi, query hookovi s ključevima, komponente i stranice, uz prikaz stanja učitavanja, praznog rezultata i pogreške.
 
-`features/competitions/api.ts` trenutačno vraća mock podatke dok backend ne izloži `GET /api/competitions`.
+`features/competitions/api.ts` dohvaća `GET /api/competitions`, pa za prikaz natjecanja lokalno mora biti pokrenut backend.

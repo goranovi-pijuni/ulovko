@@ -7,7 +7,7 @@ const statusLabel: Record<CompetitionStatus, string> = {
   finished: 'Završeno',
 };
 
-// Card tint and badge colour per status, as in the Figma home screen.
+// Card tint and badge colour per status.
 const cardClass: Record<CompetitionStatus, string> = {
   active: 'bg-linear-to-b from-primary-600 to-accent-green-600',
   upcoming: 'bg-linear-to-b from-primary-600 to-accent-purple-600',
