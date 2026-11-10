@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import { PublicLayout } from '@/app/layouts/PublicLayout';
 import { NotFound } from '@/components/shared/NotFound';
+import { CompetitionDetailPage } from '@/features/competitions/pages/CompetitionDetailPage';
 import { CompetitionsPage } from '@/features/competitions/pages/CompetitionsPage';
 
 const rootRoute = createRootRoute({
@@ -27,9 +28,24 @@ const competitionsRoute = createRoute({
   component: CompetitionsPage,
 });
 
+const competitionDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/competitions/$id',
+  // Only positive integer IDs match; anything else falls through to NotFound.
+  params: {
+    parse: ({ id }) => (/^[1-9]\d*$/.test(id) ? { id: Number(id) } : false),
+    stringify: ({ id }) => ({ id: String(id) }),
+  },
+  component: CompetitionDetailPage,
+});
+
 // Competitor, organizer and admin route trees (each with its own layout and
 // access check in beforeLoad) will be added next to the public routes.
-const routeTree = rootRoute.addChildren([indexRoute, competitionsRoute]);
+const routeTree = rootRoute.addChildren([
+  indexRoute,
+  competitionsRoute,
+  competitionDetailRoute,
+]);
 
 export const router = createRouter({ routeTree });
 

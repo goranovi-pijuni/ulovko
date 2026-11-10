@@ -3,9 +3,12 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/shared/QueryStates';
-import { useCompetitions } from '../api';
+import {
+  useCompetitions,
+  type Competition,
+  type CompetitionStatus,
+} from '../api';
 import { CompetitionCard } from '../components/CompetitionCard';
-import type { Competition, CompetitionStatus } from '../types';
 
 // Active competitions come first, then upcoming; finished ones are listed in their own section below.
 const statusOrder: Record<CompetitionStatus, number> = {

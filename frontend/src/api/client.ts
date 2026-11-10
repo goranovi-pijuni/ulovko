@@ -1,7 +1,6 @@
-// Central HTTP configuration. Orval-generated hooks (src/api/generated) will
-// use apiFetch as their custom fetcher so error handling stays in one place.
-
-const API_BASE_URL = '/api';
+// Central HTTP configuration. Orval-generated fetchers (src/api/generated) use
+// apiFetch as their mutator, so error handling stays in one place. Generated
+// URLs already include the /api prefix from the backend's OpenAPI document.
 
 export class ApiError extends Error {
   readonly status: number;
@@ -15,17 +14,25 @@ export class ApiError extends Error {
   }
 }
 
+// Orval types the TError of generated hooks with this. The parameter carries
+// the documented error body type, which apiFetch exposes as ApiError.body.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export type ErrorType<_Error> = ApiError;
+
 export async function apiFetch<T>(
-  path: string,
+  url: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(url, {
     ...init,
     // Session lives in an HttpOnly cookie managed by the backend.
     credentials: 'include',
     headers: {
       Accept: 'application/json',
-      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      // FormData bodies (file uploads) need the browser's multipart boundary.
+      ...(typeof init.body === 'string'
+        ? { 'Content-Type': 'application/json' }
+        : {}),
       ...init.headers,
     },
   });

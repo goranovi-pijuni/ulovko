@@ -4,7 +4,7 @@ React + TypeScript + Vite SPA za natjecateljsko, organizacijsko i administracijs
 
 ## Pokretanje
 
-Potreban je samo Node.js 22 ili noviji (npm dolazi uz njega), kao i za backend.
+Potreban je samo Node.js 22 ili noviji, kao i za backend.
 
 1. Instalirati Node.js LTS s [nodejs.org](https://nodejs.org/) (na Windowsima i `winget install OpenJS.NodeJS.LTS`).
 2. Instalirati ovisnosti i pokrenuti razvojni poslužitelj:
@@ -24,6 +24,26 @@ Napomene:
 - `npm install` koristiti samo pri dodavanju ili nadogradnji paketa i zatim commitati promijenjeni `package-lock.json`.
 - `allowScripts` u `package.json` dopušta instalacijsku skriptu paketa `esbuild` (koristi ga Vite).
 
+## API klijent (Orval)
+
+Tipovi i query hookovi za backend generiraju se [Orvalom](https://orval.dev/) iz OpenAPI dokumenta backenda:
+
+- `openapi.json` — commitana snimka OpenAPI dokumenta (`/api/docs-json`), jedini ulaz za generiranje.
+- `orval.config.ts` — konfiguracija: TanStack Query hookovi, `fetch` klijent i `apiFetch` iz `src/api/client.ts` kao mutator.
+- `src/api/generated/` — izlaz (`endpoints/<tag>/` i `model/`), commita se i ne mijenja ručno.
+
+Kada se API backenda promijeni:
+
+```bash
+# uz pokrenut backend na http://localhost:3000
+npm run api:fetch      # osvježi openapi.json (drugi izvor: OPENAPI_URL=...)
+npm run api:generate   # ponovno generira src/api/generated
+```
+
+Zatim commitati `openapi.json` i `src/api/generated` zajedno s promjenom koja ih koristi. Tipovi postoje samo za odgovore koje backend opisuje u Swaggeru (`@ApiOkResponse({ type: SomeDto })`); bez toga Orval odgovor tipizira kao `void`.
+
+Generirani URL-ovi već sadrže prefiks `/api`, a `apiFetch` šalje kolačić sesije i za neuspješne odgovore baca `ApiError` (tip `error` u hookovima).
+
 ## Struktura
 
 ```text
@@ -33,7 +53,7 @@ src/
     providers/       # QueryClient, kasnije sesija i tema
     layouts/         # Public, a zatim Competitor, Organizer, Admin
   features/          # jedna mapa po funkcionalnoj cjelini
-    competitions/    # primjer: types.ts, api.ts (query hookovi), components/, pages/
+    competitions/    # primjer: api.ts (omotači generiranih hookova i tipova), components/, pages/
     auth/ teams/ challenges/ submissions/ scoreboard/
     organizer/ infrastructure/ administration/
   components/
@@ -41,7 +61,7 @@ src/
     shared/          # zajedničke komponente (stanja učitavanja/pogreške, 404)
   api/
     generated/       # Orval izlaz — ne mijenjati ručno
-    client.ts        # centralna HTTP konfiguracija
+    client.ts        # centralna HTTP konfiguracija (Orval mutator)
   lib/
     validation/      # Zod sheme
     realtime/        # SSE / EventSource
@@ -49,6 +69,6 @@ src/
   tests/
 ```
 
-Svaka nova funkcionalnost slijedi uzorak iz `features/competitions`: tipovi, query hookovi s ključevima, komponente i stranice, uz prikaz stanja učitavanja, praznog rezultata i pogreške.
+Svaka nova funkcionalnost slijedi uzorak iz `features/competitions`: `api.ts` ponovno izvozi generirane hookove, ključeve upita i tipove pod nazivima te cjeline, a komponente i stranice uvoze samo iz njega, uz prikaz stanja učitavanja, praznog rezultata i pogreške.
 
 `features/competitions/api.ts` dohvaća `GET /api/competitions`, pa za prikaz natjecanja lokalno mora biti pokrenut backend.
