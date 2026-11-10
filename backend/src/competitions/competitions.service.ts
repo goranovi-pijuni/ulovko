@@ -71,6 +71,12 @@ function date(value: unknown, field: string): Date {
     throw new BadRequestException(`${field} nije valjan datum`);
   return result;
 }
+function bool(value: unknown, field: string): boolean {
+  if (value === true || value === 'true') return true;
+  if (value === false || value === 'false') return false;
+
+  throw new BadRequestException(`${field} mora biti boolean`);
+}
 
 @Injectable()
 export class CompetitionsService {
@@ -284,6 +290,7 @@ export class CompetitionsService {
           ? ''
           : str(body.challengeDescription, 'challengeDescription', 10000);
       const publishingDate = date(body.publishingDate, 'publishingDate');
+      const isPublic = bool(body.isPublic, 'isPublic');
       const flag = str(body.flag, 'flag');
       const points = int(body.points, 'points', true);
       const categoryId = int(body.categoryId, 'categoryId')!;
@@ -315,8 +322,12 @@ export class CompetitionsService {
             challengeTitle: title,
             challengeDescription: description,
             publishingDate,
+            isPublic,
+            hasHandout: pkg.hasPublic,
+            hasDeploy: pkg.hasDeploy,
             flag,
             points,
+            deployId: null,
             competitionId,
             categoryId,
           });

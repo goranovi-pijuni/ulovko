@@ -177,9 +177,12 @@ export class CompetitionsController {
         challengeTitle: { type: 'string' },
         challengeDescription: { type: 'string' },
         publishingDate: { type: 'string', format: 'date-time' },
+        isPublic: { type: 'boolean' },
         flag: { type: 'string' },
-        categoryId: { type: 'integer' },
         points: { type: 'integer' },
+        deployId: { type: 'integer' },
+        competitionId: { type: 'integer' },
+        categoryId: { type: 'integer' },
       },
     },
   })
