@@ -1,4 +1,11 @@
 import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  ApiCookieAuth,
+  ApiOkResponse,
+  ApiOperation,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
+import { UserProfileDto } from '../users/dto/user-profile.dto.js';
 import { GoogleAuthGuard } from './guards/google-auth.guard.js';
 import type { Request, Response } from 'express';
 import { AuthenticatedGuard } from './guards/authenticated.guard.js';
@@ -35,8 +42,12 @@ export class AuthController {
 
   @Get('profile')
   @UseGuards(AuthenticatedGuard)
-  getProfile(@Req() req: Request) {
-    return req.user;
+  @ApiCookieAuth('session')
+  @ApiOperation({ summary: 'Profil prijavljenog korisnika' })
+  @ApiOkResponse({ type: UserProfileDto })
+  @ApiUnauthorizedResponse({ description: 'Potrebna je prijava' })
+  getProfile(@Req() req: Request): UserProfileDto {
+    return UserProfileDto.fromUser(req.user!);
   }
 
   @Get('organizer')

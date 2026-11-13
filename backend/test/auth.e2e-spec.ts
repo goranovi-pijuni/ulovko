@@ -162,10 +162,12 @@ describe('AuthController (e2e)', () => {
       });
   });
 
-  it('should return authenticated user profile', async () => {
+  it('should return authenticated user profile without internal fields', async () => {
     currentUser = {
       id: 1,
       email: 'user@gmail.com',
+      displayName: 'User',
+      oauthUserId: 'google-123',
       permLevel: Role.USER,
     };
 
@@ -175,6 +177,7 @@ describe('AuthController (e2e)', () => {
       .expect({
         id: 1,
         email: 'user@gmail.com',
+        displayName: 'User',
         permLevel: Role.USER,
       });
   });

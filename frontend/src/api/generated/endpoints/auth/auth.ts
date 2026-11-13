@@ -20,6 +20,10 @@ import type {
   UseQueryResult
 } from '@tanstack/react-query';
 
+import type {
+  UserProfileDto
+} from '../../model';
+
 import { apiFetch } from '../../../client';
 import type { ErrorType } from '../../../client';
 
@@ -330,9 +334,12 @@ export const getAuthGetProfileUrl = () => {
   return `/api/auth/profile`
 }
 
-export const authGetProfile = async ( options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+/**
+ * @summary Profil prijavljenog korisnika
+ */
+export const authGetProfile = async ( options?: Parameters<typeof apiFetch>[1]): Promise<UserProfileDto> => {
 
-  return apiFetch<void>(getAuthGetProfileUrl(),
+  return apiFetch<UserProfileDto>(getAuthGetProfileUrl(),
   {
     ...options,
     method: 'GET'
@@ -352,7 +359,7 @@ export const getAuthGetProfileQueryKey = () => {
     }
 
 
-export const getAuthGetProfileQueryOptions = <TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authGetProfile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getAuthGetProfileQueryOptions = <TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<void>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authGetProfile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -371,10 +378,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type AuthGetProfileQueryResult = NonNullable<Awaited<ReturnType<typeof authGetProfile>>>
-export type AuthGetProfileQueryError = ErrorType<unknown>
+export type AuthGetProfileQueryError = ErrorType<void>
 
 
-export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<unknown>>(
+/** @summary Profil prijavljenog korisnika */
+export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<void>>(
   options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authGetProfile>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof authGetProfile>>,
@@ -384,7 +392,8 @@ export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfi
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<unknown>>(
+/** @summary Profil prijavljenog korisnika */
+export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<void>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authGetProfile>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof authGetProfile>>,
@@ -394,11 +403,13 @@ export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfi
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<unknown>>(
+/** @summary Profil prijavljenog korisnika */
+export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<void>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authGetProfile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<unknown>>(
+/** @summary Profil prijavljenog korisnika */
+export function useAuthGetProfile<TData = Awaited<ReturnType<typeof authGetProfile>>, TError = ErrorType<void>>(
   options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authGetProfile>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {

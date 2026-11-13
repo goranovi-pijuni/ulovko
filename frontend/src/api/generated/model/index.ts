@@ -10,3 +10,5 @@ export * from './competitionDto';
 export * from './competitionStatus';
 export * from './competitionsUploadChallengeBody';
 export * from './createCompetitionDto';
+export * from './userProfileDto';
+export * from './userProfileDtoPermLevel';

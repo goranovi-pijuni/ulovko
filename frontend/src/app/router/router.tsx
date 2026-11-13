@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router';
 import { PublicLayout } from '@/app/layouts/PublicLayout';
 import { NotFound } from '@/components/shared/NotFound';
+import { SignUpPage } from '@/features/auth/pages/SignUpPage';
 import { CompetitionDetailPage } from '@/features/competitions/pages/CompetitionDetailPage';
 import { CompetitionsPage } from '@/features/competitions/pages/CompetitionsPage';
 
@@ -39,12 +40,19 @@ const competitionDetailRoute = createRoute({
   component: CompetitionDetailPage,
 });
 
+const signUpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/signup',
+  component: SignUpPage,
+});
+
 // Competitor, organizer and admin route trees (each with its own layout and
 // access check in beforeLoad) will be added next to the public routes.
 const routeTree = rootRoute.addChildren([
   indexRoute,
   competitionsRoute,
   competitionDetailRoute,
+  signUpRoute,
 ]);
 
 export const router = createRouter({ routeTree });

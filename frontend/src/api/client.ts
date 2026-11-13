@@ -14,6 +14,18 @@ export class ApiError extends Error {
   }
 }
 
+// NestJS errors carry { message: string | string[] }; validation failures
+// list one message per field.
+export function serverMessage(error: ApiError): string | null {
+  const message: unknown =
+    typeof error.body === 'object' && error.body !== null
+      ? (error.body as { message?: unknown }).message
+      : undefined;
+  if (typeof message === 'string') return message;
+  if (Array.isArray(message)) return message.join(' ');
+  return null;
+}
+
 // Orval types the TError of generated hooks with this. The parameter carries
 // the documented error body type, which apiFetch exposes as ApiError.body.
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

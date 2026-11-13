@@ -348,9 +348,25 @@
         "parameters": [],
         "responses": {
           "200": {
-            "description": ""
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Potrebna je prijava"
           }
         },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Profil prijavljenog korisnika",
         "tags": [
           "Auth"
         ]
@@ -517,6 +533,39 @@
           "name",
           "startsAt",
           "endsAt"
+        ]
+      },
+      "UserProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "email": {
+            "type": "string",
+            "example": "ivana@example.com"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Ivana"
+          },
+          "permLevel": {
+            "type": "number",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "description": "1 = natjecatelj, 2 = organizator, 3 = administrator",
+            "example": 1
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "permLevel"
         ]
       }
     }

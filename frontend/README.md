@@ -44,6 +44,12 @@ Zatim commitati `openapi.json` i `src/api/generated` zajedno s promjenom koja ih
 
 Generirani URL-ovi već sadrže prefiks `/api`, a `apiFetch` šalje kolačić sesije i za neuspješne odgovore baca `ApiError` (tip `error` u hookovima).
 
+## Prijava i registracija
+
+`features/auth` drži sesiju (`useSession`, iz `GET /api/auth/profile`; odgovor 401 znači odjavljen korisnik), skočni prozor za prijavu (`LoginDialog`), stranicu `/signup` i profil u zaglavlju.
+
+Prijava Googleom radi preko postojećeg `GET /api/auth/google/login`. Prijava i registracija lozinkom pozivaju **predložene** rute koje backend još ne implementira. Dok ih nema, obrasci prikazuju poruku da je dostupna samo prijava Googleom. Kada backend doda rute, treba osvježiti `openapi.json` i zamijeniti ručno napisane pozive u `features/auth/api.ts` generiranima.
+
 ## Struktura
 
 ```text
