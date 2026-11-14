@@ -7,6 +7,7 @@ import {
   useRouter,
 } from '@tanstack/react-router';
 import { PublicLayout } from '@/app/layouts/PublicLayout';
+import { OrganizerLayout } from '@/app/layouts/OrganizerLayout';
 import { ErrorState } from '@/components/shared/QueryStates';
 import { NotFound } from '@/components/shared/NotFound';
 import { sessionQueryOptions } from '@/features/auth/api';
@@ -16,6 +17,7 @@ import {
 } from '@/features/auth/pages/AccessPages';
 import { CompetitionDetailPage } from '@/features/competitions/pages/CompetitionDetailPage';
 import { CompetitionsPage } from '@/features/competitions/pages/CompetitionsPage';
+import { OrganizerDashboard } from '@/features/organizer/pages/OrganizerDashboard';
 import { queryClient } from '@/app/providers/queryClient';
 
 const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -68,17 +70,6 @@ const legacySignUpRoute = createRoute({
   },
 });
 
-function OrganizerPlaceholder() {
-  return (
-    <section className="flex flex-col gap-3 rounded-lg border border-primary-500 bg-primary-600/25 p-8">
-      <h1 className="text-3xl">Organizacijski pregled</h1>
-      <p className="text-ink-300">
-        Organizacijska nadzorna ploča bit će dostupna uskoro.
-      </p>
-    </section>
-  );
-}
-
 function AuthCheckError({ reset }: { reset: () => void }) {
   const router = useRouter();
   return (
@@ -103,8 +94,14 @@ const organizerRoute = createRoute({
       throw redirect({ to: '/zabranjen-pristup' });
     }
   },
-  component: OrganizerPlaceholder,
+  component: OrganizerLayout,
   errorComponent: AuthCheckError,
+});
+
+const organizerIndexRoute = createRoute({
+  getParentRoute: () => organizerRoute,
+  path: '/',
+  component: OrganizerDashboard,
 });
 
 const routeTree = rootRoute.addChildren([
@@ -114,7 +111,7 @@ const routeTree = rootRoute.addChildren([
   loginRequiredRoute,
   accessDeniedRoute,
   legacySignUpRoute,
-  organizerRoute,
+  organizerRoute.addChildren([organizerIndexRoute]),
 ]);
 
 export const router = createRouter({ routeTree, context: { queryClient } });
