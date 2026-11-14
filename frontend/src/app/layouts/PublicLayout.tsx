@@ -7,21 +7,6 @@ import { useSession } from '@/features/auth/api';
 const navLinkClass = 'font-mono text-ink-200 hover:text-ink-100';
 const navLinkActiveClass = 'font-mono text-ink-100';
 
-// These pages are not available yet.
-const upcomingNavItems = ['Timovi', 'Ljestvica'];
-
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <span
-      aria-disabled="true"
-      title="Uskoro"
-      className="cursor-not-allowed font-mono text-ink-200"
-    >
-      {label}
-    </span>
-  );
-}
-
 // I will replace the ULOVKO text with a logo when I make one
 export function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -61,9 +46,6 @@ export function PublicLayout() {
                   Organizacija
                 </Link>
               )}
-              {upcomingNavItems.map((label) => (
-                <ComingSoon key={label} label={label} />
-              ))}
             </div>
 
             <div className="ml-auto hidden items-center gap-6 md:flex">
@@ -119,9 +101,6 @@ export function PublicLayout() {
                   Organizacija
                 </Link>
               )}
-              {upcomingNavItems.map((label) => (
-                <ComingSoon key={label} label={label} />
-              ))}
               <div className="flex items-center gap-6 border-t border-primary-600 pt-4">
                 <AuthControls
                   variant="mobile"
