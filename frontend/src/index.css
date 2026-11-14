@@ -6,11 +6,13 @@
     'DM Sans Variable', 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, monospace;
 
-  /* Main colour palette from the Figma design ("ColorPalette" frame).
-     Each scale runs from light (100) to dark (700): dark shades are for
-     backgrounds, light shades for buttons and interactive elements. */
+  /* 
+    Main colour palette
+    Each scale runs from light (100) to dark (700): dark shades are for
+    backgrounds, light shades for buttons and interactive elements. 
+  */
 
-  /* Primary: competitor pages and login; 700 is the page background. */
+  /* Primary: competitor pages and login. */
   --color-primary-100: #edf1f4;
   --color-primary-200: #bfd1db;
   --color-primary-300: #94aab6;
@@ -19,7 +21,7 @@
   --color-primary-600: #353e43;
   --color-primary-700: #1a1f22;
 
-  /* Organizer pages; 700 is the page background. */
+  /* Organizer pages. */
   --color-organizer-100: #f3f0ee;
   --color-organizer-200: #d8cac3;
   --color-organizer-300: #b8a295;
@@ -28,7 +30,7 @@
   --color-organizer-600: #433a35;
   --color-organizer-700: #221c19;
 
-  /* Secondary accents for buttons, badges and highlights. */
+  /* Secondary: accents for buttons, badges and highlights. */
   --color-accent-green-100: #e6f5e4;
   --color-accent-green-200: #b9dbb3;
   --color-accent-green-300: #96b291;

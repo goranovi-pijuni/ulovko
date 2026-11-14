@@ -1,0 +1,573 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/api": {
+      "get": {
+        "operationId": "AppController_getHello",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "App"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "HealthController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/api/competitions": {
+      "get": {
+        "operationId": "CompetitionsController_getCompetitions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CompetitionDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Dohvat svih natjecanja",
+        "tags": [
+          "competitions"
+        ]
+      },
+      "post": {
+        "operationId": "CompetitionsController_createCompetition",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCompetitionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Natjecanje stvoreno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Neispravni podaci ili nedopušteno polje (uključujući organisedBy)"
+          },
+          "401": {
+            "description": "Potrebna je prijava"
+          },
+          "403": {
+            "description": "Potrebna je uloga organizatora ili administratora"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Stvaranje natjecanja i R2 bucketa (organizator ili administrator)",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/api/competitions/{id}": {
+      "get": {
+        "operationId": "CompetitionsController_getById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "ID natjecanja",
+            "schema": {
+              "example": 1,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Natjecanje uspješno dohvaćeno",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompetitionDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID mora biti cijeli broj"
+          },
+          "404": {
+            "description": "Natjecanje nije pronađeno"
+          }
+        },
+        "summary": "Dohvat natjecanja prema ID-u",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/api/competitions/{id}/challenges": {
+      "get": {
+        "operationId": "CompetitionsController_listChallenges",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "summary": "Popis zadataka natjecanja, bez zastavica",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/api/competitions/{compId}/{taskId}/handout": {
+      "get": {
+        "operationId": "CompetitionsController_downloadHandout",
+        "parameters": [
+          {
+            "name": "compId",
+            "required": true,
+            "in": "path",
+            "description": "ID natjecanja",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "taskId",
+            "required": true,
+            "in": "path",
+            "description": "ID zadatka",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ZIP arhiva (application/zip, attachment)",
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Neispravan ID"
+          },
+          "401": {
+            "description": "Potrebna je prijava putem Googlea"
+          },
+          "403": {
+            "description": "Korisnik nije sudionik natjecanja"
+          },
+          "404": {
+            "description": "Zadatak ne postoji, nije objavljen ili nema handout"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Preuzimanje ZIP handouta zadatka preko API-ja",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/api/competitions/{competitionId}/challenges": {
+      "post": {
+        "operationId": "CompetitionsController_uploadChallenge",
+        "parameters": [
+          {
+            "name": "competitionId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "number"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "challengeTitle",
+                  "publishingDate",
+                  "flag",
+                  "categoryId"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "challengeTitle": {
+                    "type": "string"
+                  },
+                  "challengeDescription": {
+                    "type": "string"
+                  },
+                  "publishingDate": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "flag": {
+                    "type": "string"
+                  },
+                  "categoryId": {
+                    "type": "integer"
+                  },
+                  "points": {
+                    "type": "integer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "400": {
+            "description": "Neispravan ID, podaci ili ZIP arhiva"
+          },
+          "401": {
+            "description": "Potrebna je prijava"
+          },
+          "403": {
+            "description": "Potrebno je vlasništvo nad natjecanjem ili administratorska uloga"
+          },
+          "404": {
+            "description": "Natjecanje nije pronađeno"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Predaja ZIP arhive CTF zadatka",
+        "tags": [
+          "competitions"
+        ]
+      }
+    },
+    "/api/auth/google/login": {
+      "get": {
+        "operationId": "AuthController_handleLogin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "operationId": "AuthController_handleRedirect",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "operationId": "AuthController_user",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Potrebna je prijava"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Profil prijavljenog korisnika",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/organizer": {
+      "get": {
+        "operationId": "AuthController_getOrganizerContent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/admin": {
+      "get": {
+        "operationId": "AuthController_getAdminContent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "get": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "Ulovko API",
+    "description": "API za Ulovko CTF platformu",
+    "version": "1.0",
+    "contact": {}
+  },
+  "tags": [],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "session": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "connect.sid"
+      }
+    },
+    "schemas": {
+      "CompetitionStatus": {
+        "type": "string",
+        "enum": [
+          "upcoming",
+          "active",
+          "finished"
+        ]
+      },
+      "CompetitionDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "name": {
+            "type": "string",
+            "example": "FER CTF 2026"
+          },
+          "description": {
+            "type": "string",
+            "example": "Natjecanje za studente"
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-12-01T10:00:00.000Z"
+          },
+          "endsAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-12-02T10:00:00.000Z"
+          },
+          "status": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/CompetitionStatus"
+              }
+            ]
+          },
+          "organisedBy": {
+            "type": "number",
+            "description": "ID organizatora natjecanja",
+            "example": 1
+          },
+          "teamCount": {
+            "type": "number",
+            "example": 0
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "startsAt",
+          "endsAt",
+          "status",
+          "organisedBy",
+          "teamCount"
+        ]
+      },
+      "CreateCompetitionDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "FER CTF 2026",
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "example": "Natjecanje za studente",
+            "maxLength": 10000
+          },
+          "startsAt": {
+            "type": "string",
+            "example": "2026-12-01T10:00:00Z",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": "string",
+            "example": "2026-12-02T10:00:00Z",
+            "format": "date-time"
+          },
+          "min": {
+            "type": "number",
+            "minimum": 0
+          },
+          "max": {
+            "type": "number",
+            "minimum": 0
+          },
+          "decay": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "name",
+          "startsAt",
+          "endsAt"
+        ]
+      },
+      "UserProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "email": {
+            "type": "string",
+            "example": "ivana@example.com"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Ivana"
+          },
+          "permLevel": {
+            "type": "number",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "description": "1 = natjecatelj, 2 = organizator, 3 = administrator",
+            "example": 1
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "permLevel"
+        ]
+      }
+    }
+  }
+}

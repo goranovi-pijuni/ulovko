@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
+import { AuthControls } from '@/features/auth/components/AuthControls';
+import { LoginDialogProvider } from '@/features/auth/components/LoginDialogProvider';
 
 const navLinkClass = 'font-mono text-ink-200 hover:text-ink-100';
 const navLinkActiveClass = 'font-mono text-ink-100';
@@ -19,107 +21,97 @@ function ComingSoon({ label }: { label: string }) {
   );
 }
 
-function AuthButtons() {
-  return (
-    <>
-      <a
-        href="/api/auth/google/login"
-        className="font-mono text-sm text-ink-200 hover:text-ink-100"
-      >
-        LOGIN
-      </a>
-      <a
-        href="/api/auth/google/login"
-        className="rounded-md bg-primary-200 px-3 py-1 font-mono text-sm text-primary-700"
-      >
-        SIGN UP
-      </a>
-    </>
-  );
-}
-
+// I will replace the ULOVKO text with a logo when I make one
 export function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <header className="border-b border-primary-600">
-        <nav
-          aria-label="Glavna navigacija"
-          className="mx-auto flex max-w-7xl items-center gap-10 px-4 py-4 sm:px-8"
-        >
-          <Link to="/" className="font-mono text-3xl font-medium text-ink-100">
-            ULOVKO
-          </Link>
-
-          <div className="hidden items-center gap-6 md:flex">
-            <Link
-              to="/competitions"
-              className={navLinkClass}
-              activeProps={{ className: navLinkActiveClass }}
-            >
-              Competitions
-            </Link>
-            {upcomingNavItems.map((label) => (
-              <ComingSoon key={label} label={label} />
-            ))}
-          </div>
-
-          <div className="ml-auto hidden items-center gap-6 md:flex">
-            <AuthButtons />
-          </div>
-
-          <button
-            type="button"
-            className="ml-auto rounded-md p-1 text-ink-200 hover:text-ink-100 md:hidden"
-            aria-label={menuOpen ? 'Zatvori izbornik' : 'Otvori izbornik'}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-menu"
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="size-8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              {menuOpen ? (
-                <path d="M6 6l12 12M18 6L6 18" />
-              ) : (
-                <path d="M4 6h16M4 12h16M4 18h16" />
-              )}
-            </svg>
-          </button>
-        </nav>
-
-        {menuOpen && (
-          <div
-            id="mobile-menu"
-            className="flex flex-col gap-4 border-t border-primary-600 px-4 py-4 md:hidden"
+    <LoginDialogProvider>
+      <div className="flex min-h-screen flex-col">
+        <header className="border-b border-primary-600">
+          <nav
+            aria-label="Glavna navigacija"
+            className="mx-auto flex max-w-7xl items-center gap-10 px-4 py-4 sm:px-8"
           >
             <Link
-              to="/competitions"
-              className={navLinkClass}
-              activeProps={{ className: navLinkActiveClass }}
-              onClick={() => setMenuOpen(false)}
+              to="/"
+              className="font-mono text-3xl font-medium text-ink-100"
             >
-              Competitions
+              ULOVKO
             </Link>
-            {upcomingNavItems.map((label) => (
-              <ComingSoon key={label} label={label} />
-            ))}
-            <div className="flex items-center gap-6 pt-2">
-              <AuthButtons />
+
+            <div className="hidden items-center gap-6 md:flex">
+              <Link
+                to="/competitions"
+                className={navLinkClass}
+                activeProps={{ className: navLinkActiveClass }}
+              >
+                Competitions
+              </Link>
+              {upcomingNavItems.map((label) => (
+                <ComingSoon key={label} label={label} />
+              ))}
             </div>
-          </div>
-        )}
-      </header>
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-8 sm:py-10">
-        <Outlet />
-      </main>
-    </div>
+
+            <div className="ml-auto hidden items-center gap-6 md:flex">
+              <AuthControls variant="desktop" />
+            </div>
+
+            <button
+              type="button"
+              className="ml-auto rounded-md p-1 text-ink-200 hover:text-ink-100 md:hidden"
+              aria-label={menuOpen ? 'Zatvori izbornik' : 'Otvori izbornik'}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="size-8"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                {menuOpen ? (
+                  <path d="M6 6l12 12M18 6L6 18" />
+                ) : (
+                  <path d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </nav>
+
+          {menuOpen && (
+            <div
+              id="mobile-menu"
+              className="flex flex-col gap-4 border-t border-primary-600 px-4 py-4 md:hidden"
+            >
+              <Link
+                to="/competitions"
+                className={navLinkClass}
+                activeProps={{ className: navLinkActiveClass }}
+                onClick={() => setMenuOpen(false)}
+              >
+                Competitions
+              </Link>
+              {upcomingNavItems.map((label) => (
+                <ComingSoon key={label} label={label} />
+              ))}
+              <div className="flex items-center gap-6 border-t border-primary-600 pt-4">
+                <AuthControls
+                  variant="mobile"
+                  onNavigate={() => setMenuOpen(false)}
+                />
+              </div>
+            </div>
+          )}
+        </header>
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 sm:px-8 sm:py-10">
+          <Outlet />
+        </main>
+      </div>
+    </LoginDialogProvider>
   );
 }

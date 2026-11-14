@@ -12,7 +12,7 @@ Konfiguracija zajedničkog Debian/Ubuntu VPS-a za **NestJS backend i React/Vite 
 
 Caddy prosljeđuje `/api` zahtjeve s **`ulovko.fun`** backendu bez uklanjanja prefiksa `/api`, a ostale zahtjeve poslužuje kao frontend SPA (TanStack Router). Stara poddomena `api.ulovko.fun` preusmjerava na istu domenu.
 
-Backend zahtijeva aktivan Node.js proces, a frontend ne: Vite se izgrađuje u GitHub Actions, a na VPS se prenose samo datoteke iz `dist/`. Za frontend nisu potrebni pnpm na VPS-u, Docker ni zaseban systemd servis.
+Backend zahtijeva aktivan Node.js proces, a frontend ne: Vite se izgrađuje u GitHub Actions, a na VPS se prenose samo datoteke iz `dist/`. Za frontend nisu potrebni Node.js na VPS-u, Docker ni zaseban systemd servis.
 
 ## Preduvjeti
 
@@ -88,7 +88,7 @@ U GitHub Actions repository secrets postaviti `DB_APP_URL` (korisnik `ulovko_app
 
 Datoteke: `.github/workflows/frontend-ci.yml` i `.github/workflows/frontend-deploy.yml`.
 
-- Na promjene u `frontend/**` CI postavlja Node.js 22 i verziju pnpm-a iz `frontend/package.json`, pokreće `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint` i `pnpm build`. Provjere se pokreću na PR-ovima i pushu na `main`.
+- Na promjene u `frontend/**` CI postavlja Node.js 22, pokreće `npm ci`, `npm run typecheck`, `npm run lint` i `npm run build`. Provjere se pokreću na PR-ovima i pushu na `main`.
 - Nakon uspješnog CI-ja, push u `main` s promjenom u `frontend/**` poziva frontend deploy workflow.
 - Deploy ponovno izrađuje frontend i prenosi **samo** `frontend/dist/` u `/opt/ctf/frontend/dist/` koristeći `rsync --delete`.
 - Nema instalacije Node.js paketa na VPS-u ni restarta servisa; Caddy poslužuje nove datoteke čim su prenesene.

@@ -38,6 +38,7 @@ import { RoleGuard } from '../roles/role.guard.js';
 import { Roles } from '../roles/roles.decorator.js';
 import { Role } from '../roles/roles.enum.js';
 import { CompetitionOwnerGuard } from './guards/competition-owner.guard.js';
+import { CompetitionDto } from './dto/competition.dto.js';
 import { CreateCompetitionDto } from './dto/create-competition.dto.js';
 import { MAX_UPLOAD_BYTES } from '../challenge-packages/archive.service.js';
 import { CompetitionsService } from './competitions.service.js';
@@ -50,6 +51,7 @@ export class CompetitionsController {
 
   @Get()
   @ApiOperation({ summary: 'Dohvat svih natjecanja' })
+  @ApiOkResponse({ type: CompetitionDto, isArray: true })
   getCompetitions(): Promise<Competition[]> {
     return this.competitionsService.findAll();
   }
@@ -62,7 +64,10 @@ export class CompetitionsController {
     description: 'ID natjecanja',
     example: 1,
   })
-  @ApiOkResponse({ description: 'Natjecanje uspješno dohvaćeno' })
+  @ApiOkResponse({
+    description: 'Natjecanje uspješno dohvaćeno',
+    type: CompetitionDto,
+  })
   @ApiBadRequestResponse({ description: 'ID mora biti cijeli broj' })
   @ApiNotFoundResponse({ description: 'Natjecanje nije pronađeno' })
   async getById(@Param('id', ParseIntPipe) id: number): Promise<Competition> {
@@ -87,7 +92,10 @@ export class CompetitionsController {
     summary:
       'Stvaranje natjecanja i R2 bucketa (organizator ili administrator)',
   })
-  @ApiCreatedResponse({ description: 'Natjecanje stvoreno' })
+  @ApiCreatedResponse({
+    description: 'Natjecanje stvoreno',
+    type: CompetitionDto,
+  })
   @ApiBadRequestResponse({
     description:
       'Neispravni podaci ili nedopušteno polje (uključujući organisedBy)',
