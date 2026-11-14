@@ -15,6 +15,7 @@ import {
   AccessDeniedPage,
   LoginRequiredPage,
 } from '@/features/auth/pages/AccessPages';
+import { ChallengeDetailPage } from '@/features/challenges/pages/ChallengeDetailPage';
 import { CompetitionDetailPage } from '@/features/competitions/pages/CompetitionDetailPage';
 import { CompetitionsPage } from '@/features/competitions/pages/CompetitionsPage';
 import { OrganizerDashboard } from '@/features/organizer/pages/OrganizerDashboard';
@@ -47,6 +48,22 @@ const competitionDetailRoute = createRoute({
     stringify: ({ id }) => ({ id: String(id) }),
   },
   component: CompetitionDetailPage,
+});
+
+const challengeDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/competitions/$id/challenges/$challengeId',
+  params: {
+    parse: ({ id, challengeId }) =>
+      /^[1-9]\d*$/.test(id) && /^[1-9]\d*$/.test(challengeId)
+        ? { id: Number(id), challengeId: Number(challengeId) }
+        : false,
+    stringify: ({ id, challengeId }) => ({
+      id: String(id),
+      challengeId: String(challengeId),
+    }),
+  },
+  component: ChallengeDetailPage,
 });
 
 const loginRequiredRoute = createRoute({
@@ -108,6 +125,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   competitionsRoute,
   competitionDetailRoute,
+  challengeDetailRoute,
   loginRequiredRoute,
   accessDeniedRoute,
   legacySignUpRoute,

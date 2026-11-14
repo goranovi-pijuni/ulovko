@@ -4,8 +4,14 @@ import {
   ErrorState,
   LoadingState,
 } from '@/components/shared/QueryStates';
+import { useChallenges } from '@/features/challenges/api';
+import { ChallengeCard } from '@/features/challenges/components/ChallengeCard';
 import { formatDateTime, formatDuration } from '@/lib/datetime';
-import { useCompetition, type Competition } from '../api';
+import {
+  useCompetition,
+  type Competition,
+  type CompetitionStatus,
+} from '../api';
 import { CompetitionStatusBadge } from '../components/CompetitionStatusBadge';
 
 const route = getRouteApi('/competitions/$id');
@@ -20,6 +26,51 @@ function BackLink() {
     >
       ← Sva natjecanja
     </Link>
+  );
+}
+
+function PublishedChallenges({
+  competitionId,
+  status,
+}: {
+  competitionId: number;
+  status: CompetitionStatus;
+}) {
+  const { data, isPending, isError, error, refetch } = useChallenges(competitionId);
+
+  if (isPending) return <LoadingState label="Učitavanje zadataka…" />;
+  if (isError) {
+    return error.status === 404 ? (
+      <EmptyState message="Natjecanje nije pronađeno." />
+    ) : (
+      <ErrorState onRetry={() => void refetch()} />
+    );
+  }
+  if (data.length === 0) {
+    return (
+      <EmptyState
+        message={
+          status === 'finished'
+            ? 'Za ovo natjecanje nema javno objavljenih zadataka.'
+            : 'Trenutačno nema javno objavljenih zadataka.'
+        }
+      />
+    );
+  }
+
+  return (
+    <>
+      <p className="font-mono text-sm text-ink-300">Ukupno zadataka: {data.length}</p>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {data.map((challenge) => (
+          <ChallengeCard
+            key={challenge.id}
+            competitionId={competitionId}
+            challenge={challenge}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -73,6 +124,28 @@ function CompetitionDetails({ competition }: { competition: Competition }) {
           </dl>
         </section>
       </div>
+
+      <section
+        aria-labelledby="challenge-list-heading"
+        className="flex flex-col gap-5"
+      >
+        <div className="flex flex-col gap-1">
+          <h2 id="challenge-list-heading" className="text-2xl text-ink-100">
+            Zadaci
+          </h2>
+          <p className="text-sm text-ink-300">
+            Javno objavljeni zadaci ovog natjecanja
+          </p>
+        </div>
+        {competition.status === 'upcoming' ? (
+          <EmptyState message="Zadaci će biti dostupni nakon početka natjecanja." />
+        ) : (
+          <PublishedChallenges
+            competitionId={competition.id}
+            status={competition.status}
+          />
+        )}
+      </section>
     </>
   );
 }
