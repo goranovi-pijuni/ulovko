@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { Link } from '@tanstack/react-router';
 import { roleLabel, useLogout, useSession, type SessionUser } from '../api';
 import { useLoginDialog } from '../loginDialog';
 
@@ -125,14 +124,14 @@ function ProfileMenu({ user }: { user: SessionUser }) {
 }
 
 // Mobile menu: the same details shown inline.
-function ProfileSummary({ user }: { user: SessionUser }) {
+function ProfileSummary({ user, onDone }: { user: SessionUser; onDone?: () => void }) {
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex items-start gap-3">
         <Avatar user={user} />
         <ProfileDetails user={user} />
       </div>
-      <LogoutButton />
+      <LogoutButton onDone={onDone} />
     </div>
   );
 }
@@ -151,37 +150,38 @@ export function AuthControls({
   // Hold the space while the session loads so the header does not flash the
   // login buttons for users who are already signed in.
   if (session.isPending)
-    return <span aria-hidden="true" className="h-8 w-36" />;
+    return <span role="status" aria-label="Provjera prijave" className="h-8 w-36" />;
 
-  // An unreachable backend is treated as signed out.
+  if (session.isError) {
+    return (
+      <div role="alert" className="flex items-center gap-2 text-xs text-red-200">
+        <span>Prijava nije dostupna.</span>
+        <button type="button" onClick={() => void session.refetch()} className="underline underline-offset-2">
+          Pokušaj ponovno
+        </button>
+      </div>
+    );
+  }
+
   const user = session.data ?? null;
   if (user) {
     return variant === 'desktop' ? (
       <ProfileMenu user={user} />
     ) : (
-      <ProfileSummary user={user} />
+      <ProfileSummary user={user} onDone={onNavigate} />
     );
   }
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => {
-          onNavigate?.();
-          loginDialog.open();
-        }}
-        className="font-mono text-sm text-ink-200 hover:text-ink-100"
-      >
-        LOGIN
-      </button>
-      <Link
-        to="/signup"
-        onClick={onNavigate}
-        className="rounded-md bg-primary-200 px-3 py-1 font-mono text-sm text-primary-700 hover:bg-primary-100"
-      >
-        SIGN UP
-      </Link>
-    </>
+    <button
+      type="button"
+      onClick={() => {
+        onNavigate?.();
+        loginDialog.open();
+      }}
+      className="rounded-md bg-primary-200 px-3 py-1.5 font-mono text-sm text-primary-700 hover:bg-primary-100"
+    >
+      Prijava
+    </button>
   );
 }

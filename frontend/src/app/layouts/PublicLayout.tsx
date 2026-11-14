@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
 import { AuthControls } from '@/features/auth/components/AuthControls';
 import { LoginDialogProvider } from '@/features/auth/components/LoginDialogProvider';
+import { useSession } from '@/features/auth/api';
 
 const navLinkClass = 'font-mono text-ink-200 hover:text-ink-100';
 const navLinkActiveClass = 'font-mono text-ink-100';
 
-// Teams and Scoreboard have no pages yet and remain disabled.
-const upcomingNavItems = ['Teams', 'Scoreboard'];
+// These pages are not available yet.
+const upcomingNavItems = ['Timovi', 'Ljestvica'];
 
 function ComingSoon({ label }: { label: string }) {
   return (
@@ -24,6 +25,8 @@ function ComingSoon({ label }: { label: string }) {
 // I will replace the ULOVKO text with a logo when I make one
 export function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const session = useSession();
+  const canOrganize = session.data?.permLevel === 2 || session.data?.permLevel === 3;
 
   return (
     <LoginDialogProvider>
@@ -46,8 +49,17 @@ export function PublicLayout() {
                 className={navLinkClass}
                 activeProps={{ className: navLinkActiveClass }}
               >
-                Competitions
+                Natjecanja
               </Link>
+              {canOrganize && (
+                <Link
+                  to="/organizer"
+                  className={navLinkClass}
+                  activeProps={{ className: navLinkActiveClass }}
+                >
+                  Organizacija
+                </Link>
+              )}
               {upcomingNavItems.map((label) => (
                 <ComingSoon key={label} label={label} />
               ))}
@@ -94,8 +106,18 @@ export function PublicLayout() {
                 activeProps={{ className: navLinkActiveClass }}
                 onClick={() => setMenuOpen(false)}
               >
-                Competitions
+                Natjecanja
               </Link>
+              {canOrganize && (
+                <Link
+                  to="/organizer"
+                  className={navLinkClass}
+                  activeProps={{ className: navLinkActiveClass }}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  Organizacija
+                </Link>
+              )}
               {upcomingNavItems.map((label) => (
                 <ComingSoon key={label} label={label} />
               ))}

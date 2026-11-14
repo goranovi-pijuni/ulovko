@@ -401,16 +401,25 @@
       }
     },
     "/api/auth/logout": {
-      "get": {
+      "post": {
         "operationId": "AuthController_logout",
         "parameters": [],
         "responses": {
           "200": {
             "description": ""
+          },
+          "401": {
+            "description": "Potrebna je prijava"
           }
         },
         "tags": [
           "Auth"
+        ],
+        "summary": "Odjava prijavljenog korisnika",
+        "security": [
+          {
+            "session": []
+          }
         ]
       }
     }

@@ -6,16 +6,20 @@
  * OpenAPI spec version: 1.0
  */
 import {
+  useMutation,
   useQuery
 } from '@tanstack/react-query';
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult
 } from '@tanstack/react-query';
@@ -613,95 +617,42 @@ export function useAuthGetAdminContent<TData = Awaited<ReturnType<typeof authGet
 
 
 export const getAuthLogoutUrl = () => {
-
-
-
-
   return `/api/auth/logout`
 }
 
-export const authLogout = async ( options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
-
-  return apiFetch<void>(getAuthLogoutUrl(),
-  {
+/** @summary Odjava prijavljenog korisnika */
+export const authLogout = async (options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+  return apiFetch<void>(getAuthLogoutUrl(), {
     ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getAuthLogoutQueryKey = () => {
-    return [
-    `/api/auth/logout`
-    ] as const;
-    }
-
-
-export const getAuthLogoutQueryOptions = <TData = Awaited<ReturnType<typeof authLogout>>, TError = ErrorType<unknown>>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authLogout>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAuthLogoutQueryKey();
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof authLogout>>> = ({ signal }) => authLogout({ signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof authLogout>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+    method: 'POST'
+  });
 }
 
-export type AuthLogoutQueryResult = NonNullable<Awaited<ReturnType<typeof authLogout>>>
-export type AuthLogoutQueryError = ErrorType<unknown>
+export const getAuthLogoutMutationKey = () => ['authLogout'] as const;
 
+export const getAuthLogoutMutationOptions = <TError = ErrorType<void>,
+  TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext>, request?: SecondParameter<typeof apiFetch> }
+): UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext> => {
+  const mutationKey = getAuthLogoutMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
 
-export function useAuthLogout<TData = Awaited<ReturnType<typeof authLogout>>, TError = ErrorType<unknown>>(
-  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof authLogout>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof authLogout>>,
-          TError,
-          Awaited<ReturnType<typeof authLogout>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthLogout<TData = Awaited<ReturnType<typeof authLogout>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authLogout>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof authLogout>>,
-          TError,
-          Awaited<ReturnType<typeof authLogout>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthLogout<TData = Awaited<ReturnType<typeof authLogout>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authLogout>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAuthLogout<TData = Awaited<ReturnType<typeof authLogout>>, TError = ErrorType<unknown>>(
-  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof authLogout>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof authLogout>>, void> = () =>
+    authLogout(requestOptions);
 
-  const queryOptions = getAuthLogoutQueryOptions(options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
+  return { mutationFn, ...mutationOptions };
 }
 
+export type AuthLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authLogout>>>
+export type AuthLogoutMutationError = ErrorType<void>
 
-
-
-
-
+/** @summary Odjava prijavljenog korisnika */
+export const useAuthLogout = <TError = ErrorType<void>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext>, request?: SecondParameter<typeof apiFetch> },
+  queryClient?: QueryClient
+): UseMutationResult<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext> => {
+  return useMutation(getAuthLogoutMutationOptions(options), queryClient);
+}

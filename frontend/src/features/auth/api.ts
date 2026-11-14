@@ -1,14 +1,6 @@
-// Session state and auth actions. The session comes from the generated
-// GET /api/auth/profile client; credential login and registration call the
-// proposed endpoints documented in frontend/README.md, which the backend does
-// not implement yet.
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type QueryClient,
-} from '@tanstack/react-query';
-import { ApiError, apiFetch } from '@/api/client';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from '@tanstack/react-router';
+import { ApiError } from '@/api/client';
 import {
   authGetProfile,
   authLogout,
@@ -23,7 +15,7 @@ export const authKeys = {
   session: getAuthGetProfileQueryKey,
 };
 
-// Full-page navigation: Google's consent screen cannot run inside fetch.
+// Google OAuth uses a full-page redirect, not a fetch request.
 export const googleLoginUrl = getAuthHandleLoginUrl();
 
 export const roleLabel: Record<SessionUser['permLevel'], string> = {
@@ -32,93 +24,50 @@ export const roleLabel: Record<SessionUser['permLevel'], string> = {
   3: 'Administrator',
 };
 
-// Signed out is a normal state, not an error: 401 resolves to null.
-async function fetchSession({
-  signal,
-}: {
-  signal: AbortSignal;
-}): Promise<SessionUser | null> {
+async function fetchSession({ signal }: { signal: AbortSignal }): Promise<SessionUser | null> {
   try {
     return await authGetProfile({ signal });
   } catch (error) {
+    // 401 means signed out; a network error or 5xx does not.
     if (error instanceof ApiError && error.status === 401) return null;
     throw error;
   }
 }
 
+// Shared by the header and protected route loaders, so their checks agree.
+export const sessionQueryOptions = queryOptions({
+  queryKey: authKeys.session(),
+  queryFn: fetchSession,
+  staleTime: 5 * 60_000,
+});
+
 export function useSession() {
-  return useQuery({
-    queryKey: authKeys.session(),
-    queryFn: fetchSession,
-    staleTime: 5 * 60_000,
-  });
-}
-
-// --- Proposed contract (not yet in openapi.json) -----------------------------
-// Replace with the generated client once the backend exposes these routes.
-
-export interface LoginRequest {
-  /** Username or email address. */
-  identifier: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  username: string;
-  email: string;
-  password: string;
-}
-
-function setSession(queryClient: QueryClient, user: SessionUser | null) {
-  queryClient.setQueryData(authKeys.session(), user);
-}
-
-export function useLogin() {
-  const queryClient = useQueryClient();
-  return useMutation<SessionUser, ApiError, LoginRequest>({
-    mutationFn: (body) =>
-      apiFetch<SessionUser>('/api/auth/login', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    onSuccess: (user) => setSession(queryClient, user),
-  });
-}
-
-export function useRegister() {
-  const queryClient = useQueryClient();
-  return useMutation<SessionUser, ApiError, RegisterRequest>({
-    mutationFn: (body) =>
-      apiFetch<SessionUser>('/api/auth/register', {
-        method: 'POST',
-        body: JSON.stringify(body),
-      }),
-    onSuccess: (user) => setSession(queryClient, user),
-  });
+  return useQuery(sessionQueryOptions);
 }
 
 export function useLogout() {
   const queryClient = useQueryClient();
+  const router = useRouter();
+
   return useMutation<void, ApiError>({
     mutationFn: async () => {
       try {
         await authLogout();
       } catch (error) {
-        // An already expired session is as good as a successful logout.
+        // The expired session is already logged out.
         if (!(error instanceof ApiError && error.status === 401)) throw error;
       }
     },
-    onSuccess: () => {
-      setSession(queryClient, null);
-      // Refetch anything loaded with the old session's permissions.
-      void queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Prevent in-flight requests from restoring old, user-specific data.
+      await queryClient.cancelQueries();
+      queryClient.removeQueries({
         predicate: (query) => query.queryKey[0] !== authKeys.session()[0],
       });
+      queryClient.setQueryData(authKeys.session(), null);
+      // '/' currently redirects to the public competition listing.
+      await router.navigate({ to: '/', replace: true });
+      await router.invalidate();
     },
   });
-}
-
-// The proposed routes answer 404 until the backend implements them.
-export function isEndpointMissing(error: ApiError): boolean {
-  return error.status === 404 || error.status === 405 || error.status === 501;
 }

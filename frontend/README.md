@@ -44,11 +44,15 @@ Zatim commitati `openapi.json` i `src/api/generated` zajedno s promjenom koja ih
 
 Generirani URL-ovi već sadrže prefiks `/api`, a `apiFetch` šalje kolačić sesije i za neuspješne odgovore baca `ApiError` (tip `error` u hookovima).
 
-## Prijava i registracija
+## Prijava i uloge
 
-`features/auth` drži sesiju (`useSession`, iz `GET /api/auth/profile`; odgovor 401 znači odjavljen korisnik), skočni prozor za prijavu (`LoginDialog`), stranicu `/signup` i profil u zaglavlju.
+Prijava i automatska registracija rade **isključivo Google OAuthom** preko `GET /api/auth/google/login`.
+`features/auth` dohvaća sesiju iz `GET /api/auth/profile`: odgovor 401 znači odjavljenog korisnika, a mrežna pogreška prikazuje mogućnost ponovnog pokušaja.
+Odjava koristi `POST /api/auth/logout`, čisti predmemoriju i vraća korisnika na javni dio aplikacije.
 
-Prijava Googleom radi preko postojećeg `GET /api/auth/google/login`. Prijava i registracija lozinkom pozivaju **predložene** rute koje backend još ne implementira. Dok ih nema, obrasci prikazuju poruku da je dostupna samo prijava Googleom. Kada backend doda rute, treba osvježiti `openapi.json` i zamijeniti ručno napisane pozive u `features/auth/api.ts` generiranima.
+Korisnici s `permLevel` 2 (organizator) ili 3 (administrator) vide poveznicu **Organizacija**. Ruta `/organizer` provjerava ulogu i pri izravnom otvaranju URL-a; neprijavljeni korisnici preusmjeravaju se na `/prijava`, a korisnici bez odgovarajuće uloge na `/zabranjen-pristup`. Backend i dalje samostalno provjerava ovlasti.
+
+Stara ruta `/signup` preusmjerava na `/prijava`, jer se račun stvara prvom Google prijavom.
 
 ## Struktura
 
@@ -56,8 +60,8 @@ Prijava Googleom radi preko postojećeg `GET /api/auth/google/login`. Prijava i 
 src/
   app/
     router/          # rute i provjera pristupa (TanStack Router)
-    providers/       # QueryClient, kasnije sesija i tema
-    layouts/         # Public, a zatim Competitor, Organizer, Admin
+    providers/       # QueryClient
+    layouts/         # zajednički javni layout; organizacijski dio koristi postojeći izgled
   features/          # jedna mapa po funkcionalnoj cjelini
     competitions/    # primjer: api.ts (omotači generiranih hookova i tipova), components/, pages/
     auth/ teams/ challenges/ submissions/ scoreboard/
