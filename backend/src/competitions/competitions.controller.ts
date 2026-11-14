@@ -39,6 +39,7 @@ import { Roles } from '../roles/roles.decorator.js';
 import { Role } from '../roles/roles.enum.js';
 import { CompetitionOwnerGuard } from './guards/competition-owner.guard.js';
 import { CompetitionDto } from './dto/competition.dto.js';
+import { PublicChallengeDto } from './dto/public-challenge.dto.js';
 import { CreateCompetitionDto } from './dto/create-competition.dto.js';
 import { MAX_UPLOAD_BYTES } from '../challenge-packages/archive.service.js';
 import { CompetitionsService } from './competitions.service.js';
@@ -112,8 +113,18 @@ export class CompetitionsController {
   }
 
   @Get(':id/challenges')
-  @ApiOperation({ summary: 'Popis zadataka natjecanja, bez zastavica' })
-  listChallenges(@Param('id', ParseIntPipe) id: number) {
+  @ApiOperation({ summary: 'Popis javno dostupnih zadataka natjecanja' })
+  @ApiParam({ name: 'id', type: Number, description: 'ID natjecanja' })
+  @ApiOkResponse({
+    description: 'Objavljeni javni zadaci, bez zastavica',
+    type: PublicChallengeDto,
+    isArray: true,
+  })
+  @ApiBadRequestResponse({ description: 'ID mora biti cijeli broj' })
+  @ApiNotFoundResponse({ description: 'Natjecanje nije pronađeno' })
+  listChallenges(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<PublicChallengeDto[]> {
     return this.competitionsService.listChallenges(id);
   }
 
@@ -177,6 +188,7 @@ export class CompetitionsController {
         'file',
         'challengeTitle',
         'publishingDate',
+        'isPublic',
         'flag',
         'categoryId',
       ],
@@ -188,8 +200,6 @@ export class CompetitionsController {
         isPublic: { type: 'boolean' },
         flag: { type: 'string' },
         points: { type: 'integer' },
-        deployId: { type: 'integer' },
-        competitionId: { type: 'integer' },
         categoryId: { type: 'integer' },
       },
     },

@@ -29,6 +29,178 @@
         ]
       }
     },
+    "/api/flag-submission": {
+      "post": {
+        "operationId": "FlagSubmissionController_submit",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitFlagDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rezultat provjere: correct, incorrect ili already_solved (tim je već riješio zadatak)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubmissionResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Neispravno tijelo zahtjeva"
+          },
+          "401": {
+            "description": "Korisnik nije prijavljen"
+          },
+          "403": {
+            "description": "Natjecanje nije aktivno ili korisnik nije član tima"
+          },
+          "404": {
+            "description": "Zadatak nije pronađen ili nije objavljen"
+          },
+          "429": {
+            "description": "Previše pokušaja za ovaj zadatak"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Predaja zastavice za zadatak",
+        "tags": [
+          "FlagSubmission"
+        ]
+      }
+    },
+    "/api/auth/google/login": {
+      "get": {
+        "operationId": "AuthController_handleLogin",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/google/callback": {
+      "get": {
+        "operationId": "AuthController_handleRedirect",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/status": {
+      "get": {
+        "operationId": "AuthController_user",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/profile": {
+      "get": {
+        "operationId": "AuthController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Potrebna je prijava"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Profil prijavljenog korisnika",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/organizer": {
+      "get": {
+        "operationId": "AuthController_getOrganizerContent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/admin": {
+      "get": {
+        "operationId": "AuthController_getAdminContent",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "responses": {
+          "401": {
+            "description": "Potrebna je prijava"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Odjava prijavljenog korisnika",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
     "/api/competitions": {
       "get": {
         "operationId": "CompetitionsController_getCompetitions",
@@ -145,6 +317,7 @@
             "name": "id",
             "required": true,
             "in": "path",
+            "description": "ID natjecanja",
             "schema": {
               "type": "number"
             }
@@ -152,10 +325,26 @@
         ],
         "responses": {
           "200": {
-            "description": ""
+            "description": "Objavljeni javni zadaci, bez zastavica",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PublicChallengeDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID mora biti cijeli broj"
+          },
+          "404": {
+            "description": "Natjecanje nije pronađeno"
           }
         },
-        "summary": "Popis zadataka natjecanja, bez zastavica",
+        "summary": "Popis javno dostupnih zadataka natjecanja",
         "tags": [
           "competitions"
         ]
@@ -243,6 +432,7 @@
                   "file",
                   "challengeTitle",
                   "publishingDate",
+                  "isPublic",
                   "flag",
                   "categoryId"
                 ],
@@ -261,13 +451,16 @@
                     "type": "string",
                     "format": "date-time"
                   },
+                  "isPublic": {
+                    "type": "boolean"
+                  },
                   "flag": {
                     "type": "string"
                   },
-                  "categoryId": {
+                  "points": {
                     "type": "integer"
                   },
-                  "points": {
+                  "categoryId": {
                     "type": "integer"
                   }
                 }
@@ -299,129 +492,6 @@
           "competitions"
         ]
       }
-    },
-    "/api/auth/google/login": {
-      "get": {
-        "operationId": "AuthController_handleLogin",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/auth/google/callback": {
-      "get": {
-        "operationId": "AuthController_handleRedirect",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/auth/status": {
-      "get": {
-        "operationId": "AuthController_user",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/auth/profile": {
-      "get": {
-        "operationId": "AuthController_getProfile",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserProfileDto"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Potrebna je prijava"
-          }
-        },
-        "security": [
-          {
-            "session": []
-          }
-        ],
-        "summary": "Profil prijavljenog korisnika",
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/auth/organizer": {
-      "get": {
-        "operationId": "AuthController_getOrganizerContent",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/auth/admin": {
-      "get": {
-        "operationId": "AuthController_getAdminContent",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          }
-        },
-        "tags": [
-          "Auth"
-        ]
-      }
-    },
-    "/api/auth/logout": {
-      "post": {
-        "operationId": "AuthController_logout",
-        "parameters": [],
-        "responses": {
-          "200": {
-            "description": ""
-          },
-          "401": {
-            "description": "Potrebna je prijava"
-          }
-        },
-        "tags": [
-          "Auth"
-        ],
-        "summary": "Odjava prijavljenog korisnika",
-        "security": [
-          {
-            "session": []
-          }
-        ]
-      }
     }
   },
   "info": {
@@ -441,6 +511,80 @@
       }
     },
     "schemas": {
+      "SubmitFlagDto": {
+        "type": "object",
+        "properties": {
+          "challengeId": {
+            "type": "number",
+            "description": "ID zadatka",
+            "example": 1
+          },
+          "flag": {
+            "type": "string",
+            "description": "Predana zastavica",
+            "example": "FLAG{primjer}",
+            "maxLength": 512
+          }
+        },
+        "required": [
+          "challengeId",
+          "flag"
+        ]
+      },
+      "SubmissionResponseDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "correct",
+              "incorrect",
+              "already_solved"
+            ]
+          },
+          "challengeId": {
+            "type": "number",
+            "example": 1
+          }
+        },
+        "required": [
+          "status",
+          "challengeId"
+        ]
+      },
+      "UserProfileDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "number",
+            "example": 1
+          },
+          "email": {
+            "type": "string",
+            "example": "ivana@example.com"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Ivana"
+          },
+          "permLevel": {
+            "type": "number",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "description": "1 = natjecatelj, 2 = organizator, 3 = administrator",
+            "example": 1
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "displayName",
+          "permLevel"
+        ]
+      },
       "CompetitionStatus": {
         "type": "string",
         "enum": [
@@ -544,37 +688,44 @@
           "endsAt"
         ]
       },
-      "UserProfileDto": {
+      "PublicChallengeDto": {
         "type": "object",
         "properties": {
           "id": {
             "type": "number",
             "example": 1
           },
-          "email": {
+          "challengeTitle": {
             "type": "string",
-            "example": "ivana@example.com"
+            "example": "Cookie Monster"
           },
-          "displayName": {
+          "challengeDescription": {
             "type": "string",
-            "example": "Ivana"
+            "nullable": true,
+            "example": "Pronađi ranjivost."
           },
-          "permLevel": {
+          "publishingDate": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2026-12-01T10:00:00.000Z"
+          },
+          "points": {
             "type": "number",
-            "enum": [
-              1,
-              2,
-              3
-            ],
-            "description": "1 = natjecatelj, 2 = organizator, 3 = administrator",
-            "example": 1
+            "nullable": true,
+            "example": 100
+          },
+          "categoryName": {
+            "type": "string",
+            "example": "Web"
           }
         },
         "required": [
           "id",
-          "email",
-          "displayName",
-          "permLevel"
+          "challengeTitle",
+          "challengeDescription",
+          "publishingDate",
+          "points",
+          "categoryName"
         ]
       }
     }

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CompetitionsService } from './competitions.service.js';
+import { PgDialect } from 'drizzle-orm/pg-core';
+import type { SQL } from 'drizzle-orm';
+import { categories, challenges } from '../database/schema.js';
 import type { DatabaseService } from '../database/database.service.js';
 import type { ArchiveService } from '../challenge-packages/archive.service.js';
 import type { R2Service } from '../challenge-packages/r2.service.js';
@@ -86,6 +89,102 @@ describe('CompetitionsService', () => {
 
     await expect(service.findById(999)).resolves.toBeUndefined();
     expect(where).toHaveBeenCalledWith(expect.anything());
+  });
+});
+
+describe('Public challenge listings', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-05T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('does not query challenges before a competition starts', async () => {
+    const select = vi.fn();
+    const service = new CompetitionsService(
+      { db: { select } } as unknown as DatabaseService,
+      {} as ArchiveService,
+      {} as R2Service,
+    );
+    vi.spyOn(service, 'findById').mockResolvedValue({
+      ...row,
+      description: '',
+      status: 'upcoming',
+      startsAt: new Date('2026-11-06T12:00:00Z'),
+    });
+
+    await expect(service.listChallenges(3)).resolves.toEqual([]);
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it('returns only published public metadata with category names', async () => {
+    const published = {
+      id: 11,
+      challengeTitle: 'Cookie Monster',
+      challengeDescription: null,
+      publishingDate: new Date('2026-11-05T10:00:00Z'),
+      points: null,
+      categoryName: 'Web',
+    };
+    const chain = {
+      from: vi.fn(),
+      innerJoin: vi.fn(),
+      where: vi.fn(),
+      orderBy: vi.fn().mockResolvedValue([published]),
+    };
+    for (const name of ['from', 'innerJoin', 'where'] as const) {
+      chain[name].mockReturnValue(chain);
+    }
+    const select = vi.fn().mockReturnValue(chain);
+    const service = new CompetitionsService(
+      { db: { select } } as unknown as DatabaseService,
+      {} as ArchiveService,
+      {} as R2Service,
+    );
+    vi.spyOn(service, 'findById').mockResolvedValue({
+      ...row,
+      description: '',
+      status: 'active',
+    });
+
+    await expect(service.listChallenges(3)).resolves.toEqual([published]);
+    // An explicit projection keeps flags, deployment details, and IDs of
+    // internal entities out of the public response.
+    expect(select).toHaveBeenCalledWith({
+      id: challenges.id,
+      challengeTitle: challenges.challengeTitle,
+      challengeDescription: challenges.challengeDescription,
+      publishingDate: challenges.publishingDate,
+      points: challenges.points,
+      categoryName: categories.categoryName,
+    });
+    expect(chain.innerJoin).toHaveBeenCalledWith(categories, expect.anything());
+
+    const filter = chain.where.mock.calls[0][0] as SQL;
+    const { sql: query, params } = new PgDialect().sqlToQuery(filter);
+    expect(query).toContain('"competitionId"');
+    expect(query).toContain('"isPublic"');
+    expect(query).toContain('"publishingDate"');
+    expect(params.slice(0, 2)).toEqual([3, true]);
+    expect(String(params[2])).toContain('2026-11-05');
+  });
+
+  it('rejects requests for nonexistent competitions', async () => {
+    const select = vi.fn();
+    const service = new CompetitionsService(
+      { db: { select } } as unknown as DatabaseService,
+      {} as ArchiveService,
+      {} as R2Service,
+    );
+    vi.spyOn(service, 'findById').mockResolvedValue(undefined);
+
+    await expect(service.listChallenges(999)).rejects.toThrow(
+      'Natjecanje nije pronađeno',
+    );
+    expect(select).not.toHaveBeenCalled();
   });
 });
 

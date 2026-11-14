@@ -11,7 +11,8 @@ export type CompetitionsUploadChallengeBody = {
   challengeTitle: string;
   challengeDescription?: string;
   publishingDate: string;
+  isPublic: boolean;
   flag: string;
-  categoryId: number;
   points?: number;
+  categoryId: number;
 };

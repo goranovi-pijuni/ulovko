@@ -1,4 +1,9 @@
-import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { useRouter } from '@tanstack/react-router';
 import { ApiError } from '@/api/client';
 import {
@@ -24,7 +29,11 @@ export const roleLabel: Record<SessionUser['permLevel'], string> = {
   3: 'Administrator',
 };
 
-async function fetchSession({ signal }: { signal: AbortSignal }): Promise<SessionUser | null> {
+async function fetchSession({
+  signal,
+}: {
+  signal: AbortSignal;
+}): Promise<SessionUser | null> {
   try {
     return await authGetProfile({ signal });
   } catch (error) {

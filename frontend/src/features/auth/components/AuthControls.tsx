@@ -124,7 +124,13 @@ function ProfileMenu({ user }: { user: SessionUser }) {
 }
 
 // Mobile menu: the same details shown inline.
-function ProfileSummary({ user, onDone }: { user: SessionUser; onDone?: () => void }) {
+function ProfileSummary({
+  user,
+  onDone,
+}: {
+  user: SessionUser;
+  onDone?: () => void;
+}) {
   return (
     <div className="flex w-full flex-col gap-4">
       <div className="flex items-start gap-3">
@@ -150,13 +156,22 @@ export function AuthControls({
   // Hold the space while the session loads so the header does not flash the
   // login buttons for users who are already signed in.
   if (session.isPending)
-    return <span role="status" aria-label="Provjera prijave" className="h-8 w-36" />;
+    return (
+      <span role="status" aria-label="Provjera prijave" className="h-8 w-36" />
+    );
 
   if (session.isError) {
     return (
-      <div role="alert" className="flex items-center gap-2 text-xs text-red-200">
+      <div
+        role="alert"
+        className="flex items-center gap-2 text-xs text-red-200"
+      >
         <span>Prijava nije dostupna.</span>
-        <button type="button" onClick={() => void session.refetch()} className="underline underline-offset-2">
+        <button
+          type="button"
+          onClick={() => void session.refetch()}
+          className="underline underline-offset-2"
+        >
           Pokušaj ponovno
         </button>
       </div>

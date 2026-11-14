@@ -10,7 +10,10 @@ import { PublicLayout } from '@/app/layouts/PublicLayout';
 import { ErrorState } from '@/components/shared/QueryStates';
 import { NotFound } from '@/components/shared/NotFound';
 import { sessionQueryOptions } from '@/features/auth/api';
-import { AccessDeniedPage, LoginRequiredPage } from '@/features/auth/pages/AccessPages';
+import {
+  AccessDeniedPage,
+  LoginRequiredPage,
+} from '@/features/auth/pages/AccessPages';
 import { CompetitionDetailPage } from '@/features/competitions/pages/CompetitionDetailPage';
 import { CompetitionsPage } from '@/features/competitions/pages/CompetitionsPage';
 import { queryClient } from '@/app/providers/queryClient';
@@ -69,7 +72,9 @@ function OrganizerPlaceholder() {
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-primary-500 bg-primary-600/25 p-8">
       <h1 className="text-3xl">Organizacijski pregled</h1>
-      <p className="text-ink-300">Organizacijska nadzorna ploča bit će dostupna uskoro.</p>
+      <p className="text-ink-300">
+        Organizacijska nadzorna ploča bit će dostupna uskoro.
+      </p>
     </section>
   );
 }

@@ -33,6 +33,7 @@ import type {
   CompetitionStatus,
 } from './interfaces/competition.interface.js';
 import type { CreateCompetitionDto } from './dto/create-competition.dto.js';
+import type { PublicChallengeDto } from './dto/public-challenge.dto.js';
 
 function status(start: Date, end: Date, now: Date): CompetitionStatus {
   return now < start ? 'upcoming' : now >= end ? 'finished' : 'active';
@@ -171,12 +172,14 @@ export class CompetitionsService {
     return result;
   }
 
-  async listChallenges(competitionId: number) {
+  async listChallenges(competitionId: number): Promise<PublicChallengeDto[]> {
     const competition = await this.findById(competitionId);
     if (!competition) throw new NotFoundException('Natjecanje nije pronađeno');
-    // Public challenge listings must not reveal challenges before the event starts.
-    if (competition.startsAt > new Date()) return [];
-    // Never return flag or R2 credentials to the public frontend.
+    const now = new Date();
+    if (competition.startsAt > now) return [];
+
+    // Expose only published, public metadata. Flags and deployment data must
+    // never be selected by this unauthenticated endpoint.
     return this.database.db
       .select({
         id: challenges.id,
@@ -184,13 +187,15 @@ export class CompetitionsService {
         challengeDescription: challenges.challengeDescription,
         publishingDate: challenges.publishingDate,
         points: challenges.points,
-        categoryId: challenges.categoryId,
+        categoryName: categories.categoryName,
       })
       .from(challenges)
+      .innerJoin(categories, eq(challenges.categoryId, categories.id))
       .where(
         and(
           eq(challenges.competitionId, competitionId),
-          lte(challenges.publishingDate, new Date()),
+          eq(challenges.isPublic, true),
+          lte(challenges.publishingDate, now),
         ),
       )
       .orderBy(challenges.publishingDate);

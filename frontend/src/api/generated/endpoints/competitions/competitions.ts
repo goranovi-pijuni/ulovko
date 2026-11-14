@@ -27,7 +27,8 @@ import type {
 import type {
   CompetitionDto,
   CompetitionsUploadChallengeBody,
-  CreateCompetitionDto
+  CreateCompetitionDto,
+  PublicChallengeDto
 } from '../../model';
 
 import { apiFetch } from '../../../client';
@@ -347,11 +348,11 @@ export const getCompetitionsListChallengesUrl = (id: number,) => {
 }
 
 /**
- * @summary Popis zadataka natjecanja, bez zastavica
+ * @summary Popis javno dostupnih zadataka natjecanja
  */
-export const competitionsListChallenges = async (id: number, options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
+export const competitionsListChallenges = async (id: number, options?: Parameters<typeof apiFetch>[1]): Promise<PublicChallengeDto[]> => {
 
-  return apiFetch<void>(getCompetitionsListChallengesUrl(id),
+  return apiFetch<PublicChallengeDto[]>(getCompetitionsListChallengesUrl(id),
   {
     ...options,
     method: 'GET'
@@ -371,7 +372,7 @@ export const getCompetitionsListChallengesQueryKey = (id: number,) => {
     }
 
 
-export const getCompetitionsListChallengesQueryOptions = <TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<unknown>>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof competitionsListChallenges>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
+export const getCompetitionsListChallengesQueryOptions = <TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<void>>(id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof competitionsListChallenges>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
@@ -390,11 +391,11 @@ const {query: queryOptions, request: requestOptions} = options ?? {};
 }
 
 export type CompetitionsListChallengesQueryResult = NonNullable<Awaited<ReturnType<typeof competitionsListChallenges>>>
-export type CompetitionsListChallengesQueryError = ErrorType<unknown>
+export type CompetitionsListChallengesQueryError = ErrorType<void>
 
 
-/** @summary Popis zadataka natjecanja, bez zastavica */
-export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<unknown>>(
+/** @summary Popis javno dostupnih zadataka natjecanja */
+export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<void>>(
  id: number, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof competitionsListChallenges>>, TError, TData>> & Pick<
         DefinedInitialDataOptions<
           Awaited<ReturnType<typeof competitionsListChallenges>>,
@@ -404,8 +405,8 @@ export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof 
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/** @summary Popis zadataka natjecanja, bez zastavica */
-export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<unknown>>(
+/** @summary Popis javno dostupnih zadataka natjecanja */
+export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<void>>(
  id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof competitionsListChallenges>>, TError, TData>> & Pick<
         UndefinedInitialDataOptions<
           Awaited<ReturnType<typeof competitionsListChallenges>>,
@@ -415,13 +416,13 @@ export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof 
       >, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/** @summary Popis zadataka natjecanja, bez zastavica */
-export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<unknown>>(
+/** @summary Popis javno dostupnih zadataka natjecanja */
+export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<void>>(
  id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof competitionsListChallenges>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
   ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-/** @summary Popis zadataka natjecanja, bez zastavica */
-export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<unknown>>(
+/** @summary Popis javno dostupnih zadataka natjecanja */
+export function useCompetitionsListChallenges<TData = Awaited<ReturnType<typeof competitionsListChallenges>>, TError = ErrorType<void>>(
  id: number, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof competitionsListChallenges>>, TError, TData>>, request?: SecondParameter<typeof apiFetch>}
  , queryClient?: QueryClient
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -566,11 +567,12 @@ if(competitionsUploadChallengeBody.challengeDescription !== undefined) {
  formData.append(`challengeDescription`, competitionsUploadChallengeBody.challengeDescription);
  }
 formData.append(`publishingDate`, competitionsUploadChallengeBody.publishingDate);
+formData.append(`isPublic`, competitionsUploadChallengeBody.isPublic.toString())
 formData.append(`flag`, competitionsUploadChallengeBody.flag);
-formData.append(`categoryId`, competitionsUploadChallengeBody.categoryId.toString())
 if(competitionsUploadChallengeBody.points !== undefined) {
  formData.append(`points`, competitionsUploadChallengeBody.points.toString())
  }
+formData.append(`categoryId`, competitionsUploadChallengeBody.categoryId.toString())
 
   return apiFetch<unknown>(getCompetitionsUploadChallengeUrl(competitionId),
   {

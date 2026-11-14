@@ -617,42 +617,73 @@ export function useAuthGetAdminContent<TData = Awaited<ReturnType<typeof authGet
 
 
 export const getAuthLogoutUrl = () => {
+
+
+
+
   return `/api/auth/logout`
 }
 
-/** @summary Odjava prijavljenog korisnika */
-export const authLogout = async (options?: Parameters<typeof apiFetch>[1]): Promise<void> => {
-  return apiFetch<void>(getAuthLogoutUrl(), {
+/**
+ * @summary Odjava prijavljenog korisnika
+ */
+export const authLogout = async ( options?: Parameters<typeof apiFetch>[1]): Promise<unknown> => {
+
+  return apiFetch<unknown>(getAuthLogoutUrl(),
+  {
     ...options,
     method: 'POST'
-  });
-}
+
+
+  }
+);}
+
+
+
+
 
 export const getAuthLogoutMutationKey = () => ['authLogout'] as const;
 
 export const getAuthLogoutMutationOptions = <TError = ErrorType<void>,
-  TContext = unknown>(options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext>, request?: SecondParameter<typeof apiFetch> }
-): UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext> => {
-  const mutationKey = getAuthLogoutMutationKey();
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError,void, TContext> => {
 
-  const mutationFn: MutationFunction<Awaited<ReturnType<typeof authLogout>>, void> = () =>
-    authLogout(requestOptions);
+const mutationKey = getAuthLogoutMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
 
-  return { mutationFn, ...mutationOptions };
-}
 
-export type AuthLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authLogout>>>
-export type AuthLogoutMutationError = ErrorType<void>
 
-/** @summary Odjava prijavljenog korisnika */
-export const useAuthLogout = <TError = ErrorType<void>, TContext = unknown>(
-  options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext>, request?: SecondParameter<typeof apiFetch> },
-  queryClient?: QueryClient
-): UseMutationResult<Awaited<ReturnType<typeof authLogout>>, TError, void, TContext> => {
-  return useMutation(getAuthLogoutMutationOptions(options), queryClient);
-}
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof authLogout>>, void> = () => {
+
+
+          return  authLogout(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AuthLogoutMutationResult = NonNullable<Awaited<ReturnType<typeof authLogout>>>
+
+    export type AuthLogoutMutationError = ErrorType<void>
+
+
+    /** @summary Odjava prijavljenog korisnika */
+export const useAuthLogout = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof authLogout>>, TError,void, TContext>, request?: SecondParameter<typeof apiFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof authLogout>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getAuthLogoutMutationOptions(options), queryClient);
+    }

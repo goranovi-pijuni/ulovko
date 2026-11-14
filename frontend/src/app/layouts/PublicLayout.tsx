@@ -26,7 +26,8 @@ function ComingSoon({ label }: { label: string }) {
 export function PublicLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const session = useSession();
-  const canOrganize = session.data?.permLevel === 2 || session.data?.permLevel === 3;
+  const canOrganize =
+    session.data?.permLevel === 2 || session.data?.permLevel === 3;
 
   return (
     <LoginDialogProvider>

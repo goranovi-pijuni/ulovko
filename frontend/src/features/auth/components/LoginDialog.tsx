@@ -28,10 +28,12 @@ export function LoginDialog({
     >
       <div className="relative flex flex-col gap-5 p-8">
         <header className="flex flex-col gap-2 pr-8">
-          <h2 id="login-title" className="text-2xl">Prijava</h2>
+          <h2 id="login-title" className="text-2xl">
+            Prijava
+          </h2>
           <p className="text-sm text-ink-300">
-            Prijavite se Google računom. Ako još nemate Ulovko račun,
-            automatski ćemo ga izraditi.
+            Prijavite se Google računom. Ako još nemate Ulovko račun, automatski
+            ćemo ga izraditi.
           </p>
         </header>
 
@@ -43,7 +45,15 @@ export function LoginDialog({
           aria-label="Zatvori prijavu"
           className="absolute top-4 right-4 rounded-md p-1 text-ink-300 hover:text-ink-100"
         >
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" aria-hidden="true">
+          <svg
+            viewBox="0 0 24 24"
+            className="size-5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
             <path d="M6 6l12 12M18 6L6 18" />
           </svg>
         </button>
