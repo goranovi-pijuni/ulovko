@@ -1,8 +1,8 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet } from '@tanstack/react-router';
 
-const activeLinkClass = "border-organizer-300 bg-organizer-500/40 text-ink-100";
+const activeLinkClass = 'border-organizer-300 bg-organizer-500/40 text-ink-100';
 const linkClass =
-  "rounded-md border border-transparent px-3 py-2 font-mono text-sm text-ink-200 transition hover:bg-primary-500/40 hover:text-ink-100";
+  'rounded-md border border-transparent px-3 py-2 font-mono text-sm text-ink-200 transition hover:bg-primary-500/40 hover:text-ink-100';
 
 export function OrganizerLayout() {
   return (
@@ -27,6 +27,13 @@ export function OrganizerLayout() {
           </Link>
           <Link to="/organizer" hash="natjecanja" className={linkClass}>
             Moja natjecanja
+          </Link>
+          <Link
+            to="/organizer/competitions/new"
+            className={linkClass}
+            activeProps={{ className: `${linkClass} ${activeLinkClass}` }}
+          >
+            Novo natjecanje
           </Link>
         </nav>
 

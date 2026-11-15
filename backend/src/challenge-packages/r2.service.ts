@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import {
+  CopyObjectCommand,
   CreateBucketCommand,
   GetObjectCommand,
   DeleteObjectCommand,
@@ -15,6 +16,7 @@ import {
 import { createReadStream } from 'node:fs';
 import { Readable } from 'node:stream';
 import { stat } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import type { PreparedPackage } from './archive.service.js';
 
 // R2 requires bucket names of at least three characters. Database IDs 1 and 2
@@ -103,6 +105,62 @@ export class R2Service {
     } catch (error) {
       await this.cleanup(bucket, uploaded);
       throw error;
+    }
+  }
+
+  // Overwrite the runner's fixed <taskId>/ R2 keys, backing up old objects
+  // first. A replacement may remove public/ or deploy/, so stale objects must
+  // be deleted as well. Roll back R2 if uploading or updating PostgreSQL fails.
+  async replacePackage(
+    competitionId: number,
+    taskId: number,
+    pkg: PreparedPackage,
+    previous: { hasPublic: boolean; hasDeploy: boolean },
+    commit: () => Promise<void>,
+  ): Promise<void> {
+    const bucket = await this.ensureCompetitionBucket(competitionId);
+    const prefix = `${taskId}/`;
+    const backup = `_backups/${taskId}/${randomUUID()}/`;
+    const oldNames = [
+      ...(previous.hasDeploy ? ['config.yaml', 'deploy.zip'] : []),
+      ...(previous.hasPublic ? ['public.zip'] : []),
+    ];
+    const newNames = [
+      ...(pkg.configPath ? ['config.yaml'] : []),
+      ...(pkg.publicZip ? ['public.zip'] : []),
+      ...(pkg.deployZip ? ['deploy.zip'] : []),
+    ];
+    const copy = (from: string, to: string) => this.s3.send(new CopyObjectCommand({
+      Bucket: bucket,
+      Key: to,
+      CopySource: `${bucket}/${from}`,
+    }));
+    const backedUp: string[] = [];
+    try {
+      for (const name of oldNames) {
+        await copy(prefix + name, backup + name);
+        backedUp.push(name);
+      }
+      try {
+        await this.upload(competitionId, taskId, pkg);
+        for (const name of oldNames.filter((name) => !newNames.includes(name))) {
+          await this.s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: prefix + name }));
+        }
+        await commit();
+      } catch (error) {
+        // Restore old contents and remove any newly introduced keys.
+        const restoration = await Promise.allSettled([
+          ...backedUp.map((name) => copy(backup + name, prefix + name)),
+          ...newNames.filter((name) => !oldNames.includes(name)).map((name) =>
+            this.s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: prefix + name }))),
+        ]);
+        if (restoration.some((result) => result.status === 'rejected')) {
+          throw new ServiceUnavailableException('Izmjena nije uspjela i potrebna je provjera R2 pohrane');
+        }
+        throw error;
+      }
+    } finally {
+      await this.cleanup(bucket, backedUp.map((name) => backup + name));
     }
   }
 

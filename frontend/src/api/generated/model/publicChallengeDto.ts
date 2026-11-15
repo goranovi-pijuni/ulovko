@@ -15,4 +15,5 @@ export interface PublicChallengeDto {
   /** @nullable */
   points: number | null;
   categoryName: string;
+  hasHandout: boolean;
 }

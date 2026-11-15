@@ -6,11 +6,26 @@ import {
 } from '@/components/shared/QueryStates';
 import { useCompetition, type Competition } from '@/features/competitions/api';
 import { formatDateTime } from '@/lib/datetime';
-import { useChallenges, type Challenge } from '../api';
+import { useChallengeEndpoints, useChallenges, type Challenge } from '../api';
+import { ChallengeEndpoints } from '../components/ChallengeEndpoints';
+import { ChallengeHandout } from '../components/ChallengeHandout';
 
 const route = getRouteApi('/competitions/$id/challenges/$challengeId');
 
-function ChallengeInformation({ challenge }: { challenge: Challenge }) {
+function PublicChallengeServices({ competitionId, challengeId }: { competitionId: number; challengeId: number }) {
+  const { data, isPending, isError, refetch } = useChallengeEndpoints(competitionId, challengeId);
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-mono text-sm text-ink-300">Pokrenuti servisi</h2>
+      {isPending ? <p className="text-sm text-ink-300">Provjera servisa…</p>
+        : isError ? (
+          <p className="text-sm text-red-300">Nije moguće provjeriti servise. <button type="button" onClick={() => void refetch()} className="underline">Pokušaj ponovno</button></p>
+        ) : <ChallengeEndpoints endpoints={data} />}
+    </section>
+  );
+}
+
+function ChallengeInformation({ challenge, competitionId }: { challenge: Challenge; competitionId: number }) {
   return (
     <article className="flex flex-col gap-7">
       <header className="flex flex-col gap-4">
@@ -58,6 +73,15 @@ function ChallengeInformation({ challenge }: { challenge: Challenge }) {
           </dl>
         </aside>
       </div>
+      <div className="grid gap-7 lg:grid-cols-2">
+        {challenge.hasHandout && (
+          <section className="flex flex-col gap-3">
+            <h2 className="font-mono text-sm text-ink-300">Datoteke zadatka</h2>
+            <ChallengeHandout competitionId={competitionId} challengeId={challenge.id} />
+          </section>
+        )}
+        <PublicChallengeServices competitionId={competitionId} challengeId={challenge.id} />
+      </div>
     </article>
   );
 }
@@ -90,7 +114,7 @@ function PublishedChallenge({
     );
   }
 
-  return <ChallengeInformation challenge={challenge} />;
+  return <ChallengeInformation challenge={challenge} competitionId={competitionId} />;
 }
 
 function CompetitionChallenge({

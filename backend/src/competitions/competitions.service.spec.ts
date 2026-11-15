@@ -128,6 +128,7 @@ describe('Public challenge listings', () => {
       publishingDate: new Date('2026-11-05T10:00:00Z'),
       points: null,
       categoryName: 'Web',
+      hasHandout: true,
     };
     const chain = {
       from: vi.fn(),
@@ -160,6 +161,7 @@ describe('Public challenge listings', () => {
       publishingDate: challenges.publishingDate,
       points: challenges.points,
       categoryName: categories.categoryName,
+      hasHandout: challenges.hasHandout,
     });
     expect(chain.innerJoin).toHaveBeenCalledWith(categories, expect.anything());
 

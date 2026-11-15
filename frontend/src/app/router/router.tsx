@@ -19,6 +19,8 @@ import { ChallengeDetailPage } from '@/features/challenges/pages/ChallengeDetail
 import { CompetitionDetailPage } from '@/features/competitions/pages/CompetitionDetailPage';
 import { CompetitionsPage } from '@/features/competitions/pages/CompetitionsPage';
 import { OrganizerDashboard } from '@/features/organizer/pages/OrganizerDashboard';
+import { CreateCompetitionPage } from '@/features/organizer/pages/CreateCompetitionPage';
+import { OrganizerCompetitionPage } from '@/features/organizer/pages/OrganizerCompetitionPage';
 import { queryClient } from '@/app/providers/queryClient';
 
 const rootRoute = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -43,6 +45,10 @@ const competitionsRoute = createRoute({
 const competitionDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/competitions/$id',
+  validateSearch: (search: Record<string, unknown>): { stvoreno?: boolean } =>
+    search.stvoreno === true || search.stvoreno === 'true'
+      ? { stvoreno: true }
+      : {},
   params: {
     parse: ({ id }) => (/^[1-9]\d*$/.test(id) ? { id: Number(id) } : false),
     stringify: ({ id }) => ({ id: String(id) }),
@@ -121,6 +127,26 @@ const organizerIndexRoute = createRoute({
   component: OrganizerDashboard,
 });
 
+const organizerCreateRoute = createRoute({
+  getParentRoute: () => organizerRoute,
+  path: '/competitions/new',
+  component: CreateCompetitionPage,
+});
+
+const organizerCompetitionRoute = createRoute({
+  getParentRoute: () => organizerRoute,
+  path: '/competitions/$id',
+  validateSearch: (search: Record<string, unknown>): { stvoreno?: boolean } =>
+    search.stvoreno === true || search.stvoreno === 'true'
+      ? { stvoreno: true }
+      : {},
+  params: {
+    parse: ({ id }) => (/^[1-9]\d*$/.test(id) && Number.isSafeInteger(Number(id)) ? { id: Number(id) } : false),
+    stringify: ({ id }) => ({ id: String(id) }),
+  },
+  component: OrganizerCompetitionPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   competitionsRoute,
@@ -129,7 +155,7 @@ const routeTree = rootRoute.addChildren([
   loginRequiredRoute,
   accessDeniedRoute,
   legacySignUpRoute,
-  organizerRoute.addChildren([organizerIndexRoute]),
+  organizerRoute.addChildren([organizerIndexRoute, organizerCreateRoute, organizerCompetitionRoute]),
 ]);
 
 export const router = createRouter({ routeTree, context: { queryClient } });

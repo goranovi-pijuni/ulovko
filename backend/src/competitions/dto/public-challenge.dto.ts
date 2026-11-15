@@ -24,4 +24,7 @@ export class PublicChallengeDto {
 
   @ApiProperty({ example: 'Web' })
   categoryName!: string;
+
+  @ApiProperty({ example: true })
+  hasHandout!: boolean;
 }

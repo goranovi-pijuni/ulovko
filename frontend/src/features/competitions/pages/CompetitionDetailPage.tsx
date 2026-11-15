@@ -152,6 +152,7 @@ function CompetitionDetails({ competition }: { competition: Competition }) {
 
 export function CompetitionDetailPage() {
   const { id } = route.useParams();
+  const { stvoreno } = route.useSearch();
   const { data, isPending, isError, error, refetch } = useCompetition(id);
 
   return (
@@ -167,7 +168,20 @@ export function CompetitionDetailPage() {
           <ErrorState onRetry={() => void refetch()} />
         )
       ) : (
-        <CompetitionDetails competition={data} />
+        <>
+          {stvoreno && (
+            <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent-green-400 bg-accent-green-600/30 px-5 py-4 text-accent-green-100">
+              <p>Natjecanje je uspješno stvoreno.</p>
+              <Link
+                to="/organizer"
+                className="font-mono text-sm underline underline-offset-4 hover:text-ink-100"
+              >
+                Natrag na organizacijski pregled
+              </Link>
+            </div>
+          )}
+          <CompetitionDetails competition={data} />
+        </>
       )}
     </div>
   );
