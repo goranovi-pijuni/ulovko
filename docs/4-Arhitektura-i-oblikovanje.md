@@ -64,21 +64,53 @@ Tim (`Teams`) ima kapetana koji je korisnik sustava. Sudjelovanje korisnika u po
 
 Datoteke nisu prikazane kao zasebni relacijski entiteti jer se arhive nalaze u Cloudflare R2: za svaki zadatak pohranjuju se odgovarajući `public.zip`, `deploy.zip` i `config.yaml`. Baza vodi oznake `hasHandout` i `hasDeploy`, a identitet natjecanja i zadatka određuje lokaciju objekata. Pristup tim datotekama kontrolira aplikacijski API.
 
-### 4.3.2 Reprezentativni UML dijagram razreda
+### 4.3.2 UML dijagrami razreda
 
-Za reprezentativni dio oblikovanja odabrana je **obrada ZIP paketa zadatka i njegovo postavljanje na Runner** (UC-012, UC-013). Taj dio obuhvaća provjeru podataka, trajnu pohranu i pozivanje izdvojenog izvršnog sustava, pa jasno pokazuje granice odgovornosti među razredima.
+Dijagrami razreda prikazuju raspodjelu odgovornosti u tri povezana dijela sustava: upravljanje natjecanjima i zadacima, sudjelovanje i bodovanje te upravljanje korisnicima i ovlastima. 
+
+#### 4.3.2.1 Upravljanje natjecanjima i zadacima
+
+Prvi dijagram obuhvaća obradu ZIP paketa zadataka i njihovo postavljanje na Runner (UC-012, UC-013). Prikazuje provjeru paketa, trajnu pohranu te komunikaciju s izdvojenim izvršnim sustavom.
 
 ![Dijagram razreda za obradu i postavljanje zadataka](./assets/diagrams/plantuml/4-3-2-ulovko-challenges-CD.svg)
 
-**Slika 4.3.** Reprezentativni UML dijagram razreda za upravljanje zadacima.
+**Slika 4.3.** UML dijagram razreda za upravljanje natjecanjima i zadacima.
 
 **PlantUML izvor:** [4-3-2-ulovko-challenges-CD.puml](./puml/4-3-2-ulovko-challenges-CD.puml)
 
-**Implementacija:** [`competitions.controller.ts`](../backend/src/competitions/competitions.controller.ts), [`competitions.service.ts`](../backend/src/competitions/competitions.service.ts), [`archive.service.ts`](../backend/src/challenge-packages/archive.service.ts), [`r2.service.ts`](../backend/src/challenge-packages/r2.service.ts) i [`challenge-deployments.service.ts`](../backend/src/competitions/challenge-deployments.service.ts).
+**Povezani moduli:** [`competitions`](../backend/src/competitions/), [`challenge-packages`](../backend/src/challenge-packages/).
 
-`CompetitionsController` prima HTTP zahtjeve te ih prosljeđuje odgovarajućim servisima. Prije organizatorskih radnji `CompetitionOwnerGuard` provjerava pripada li natjecanje prijavljenom organizatoru odnosno ima li korisnik administratorske ovlasti. `CompetitionsService` obrađuje metapodatke zadataka i koordinira `ArchiveService` i `R2Service`. `ArchiveService` provjerava ZIP i priprema `PreparedPackage`, čiji se privremeni sadržaj uklanja metodom `cleanup()`. `R2Service` pohranjuje datoteke i pri zamjeni ZIP-a nastoji očuvati prethodno stanje u slučaju neuspjeha.
+`CompetitionsController` prima HTTP zahtjeve i prosljeđuje ih odgovarajućim servisima. Prije organizatorskih radnji `CompetitionOwnerGuard` provjerava pripada li natjecanje prijavljenom organizatoru odnosno ima li korisnik administratorske ovlasti. `CompetitionsService` obrađuje metapodatke zadataka te koordinira `ArchiveService` i `R2Service`. `ArchiveService` provjerava ZIP i priprema `PreparedPackage`, čiji se privremeni sadržaj uklanja metodom `cleanup()`. `R2Service` pohranjuje datoteke te omogućuje njihovu zamjenu i preuzimanje javnih priloga.
 
-`ChallengeDeploymentsService` zasebno upravlja tijekom izgradnje i postavljanja, dok `RunnerClient` pruža autentificirane HTTP operacije prema Runneru. Oba servisa koriste `DatabaseService` za pristup trajnom stanju. Time promjena načina izvođenja zadataka ne zahtijeva premještanje pravila za pohranu natjecanja, a `CompetitionsService` ne mora poznavati detalje K3s-a.
+`ChallengeDeploymentsService` upravlja tijekom izgradnje i postavljanja, a `RunnerClient` pruža autentificirane HTTP operacije prema izdvojenom Runneru. `DatabaseService` omogućuje pristup trajnom stanju natjecanja i objava.
+
+#### 4.3.2.2 Sudjelovanje u natjecanju i bodovanje
+
+Drugi dijagram obuhvaća osnivanje i pridruživanje timovima, predaju zastavica i ljestvicu rezultata (UC-006, UC-007, UC-009, UC-010). Korisnik se timu pridružuje u kontekstu pojedinog natjecanja, a pravilo najviše jednog tima po korisniku i natjecanju provjerava `TeamsService`.
+
+![Dijagram razreda za sudjelovanje i bodovanje](./assets/diagrams/plantuml/4-3-2-ulovko-participation-CD.svg)
+
+**Slika 4.4.** UML dijagram razreda za timove, predaju zastavica i bodovanje.
+
+**PlantUML izvor:** [4-3-2-ulovko-participation-CD.puml](./puml/4-3-2-ulovko-participation-CD.puml)
+
+**Povezani moduli:** [`flag_submission`](../backend/src/flag_submission/), [`database`](../backend/src/database/).
+
+`FlagSubmissionController` prima predanu zastavicu, a `FlagSubmissionService` provjerava dostupnost zadatka, trajanje natjecanja, pripadnost timu i prethodna rješenja. Uspješno rješenje evidentira se samo jednom po timu i zadatku. Poslovna logika koristi apstraktni `FlagSubmissionRepository`, dok `DatabaseFlagSubmissionRepository` ostvaruje njegovo sučelje nad relacijskom bazom. `ScoreboardService` iz evidentiranih rješenja i pravila bodovanja izračunava poredak timova, a `ScoreboardController` omogućuje njegov prikaz za pojedino natjecanje.
+
+#### 4.3.2.3 Korisnici, autentikacija i ovlasti
+
+Treći dijagram prikazuje prijavu vanjskim pružateljem identiteta, rad s korisničkim profilom i obradu zahtjeva za organizatorske ovlasti (UC-002, UC-003, UC-004, UC-011).
+
+![Dijagram razreda za korisnike i ovlasti](./assets/diagrams/plantuml/4-3-2-ulovko-users-CD.svg)
+
+**Slika 4.5.** UML dijagram razreda za autentikaciju, korisničke podatke i odobravanje ovlasti.
+
+**PlantUML izvor:** [4-3-2-ulovko-users-CD.puml](./puml/4-3-2-ulovko-users-CD.puml)
+
+**Povezani moduli:** [`auth`](../backend/src/auth/), [`roles`](../backend/src/roles/), [`users`](../backend/src/users/).
+
+`AuthController` izlaže prijavu, odjavu i dohvat prijavljenog korisnika. `GoogleAuthGuard` i `GoogleStrategy` povezuju zahtjev s postupkom Google OAuth prijave, a `AuthService` pronalazi ili stvara korisnički zapis. `SessionSerializer` povezuje poslužiteljsku sesiju s korisničkim identitetom. `UsersService` obrađuje podatke profila i povijest sudjelovanja, dok `PermissionRequestsService` vodi zahtjeve za organizatorske ovlasti te odluke administratora. `RoleGuard` provjerava uloge prije zaštićenih administrativnih radnji.
 
 ## 4.4 Ponašanje tijekom izvođenja
 

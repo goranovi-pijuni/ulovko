@@ -1,0 +1,99 @@
+@startuml
+' UML dijagram razreda: sudjelovanje timova, predaja zastavica i bodovanje.
+' Prikazane su kljucne odgovornosti i odnosi, ne svi parametri HTTP API-ja.
+
+top to bottom direction
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 13
+skinparam ArrowColor #71849C
+skinparam ArrowThickness 1.2
+skinparam nodesep 42
+skinparam ranksep 58
+skinparam packageStyle rectangle
+skinparam package {
+  BackgroundColor #FCFDFE
+  BorderColor #CED8E6
+  FontColor #33455D
+  FontSize 14
+}
+skinparam class {
+  BackgroundColor #F7FAFE
+  HeaderBackgroundColor #ECF1F8
+  BorderColor #A4B4CC
+  FontColor #1E2D44
+  AttributeFontColor #263750
+  StereotypeFontColor #536782
+
+  BackgroundColor<<controller>> #EAF2FF
+  BorderColor<<controller>> #86A9D6
+  BackgroundColor<<service>> #EDF7F5
+  BorderColor<<service>> #8BB9B0
+  BackgroundColor<<repository>> #F2F5FC
+  BorderColor<<repository>> #A4B4CC
+}
+skinparam stereotypeCBackgroundColor<<controller>> #8EB2E0
+skinparam stereotypeCBackgroundColor<<service>> #84B8AD
+skinparam stereotypeCBackgroundColor<<repository>> #A4B4CC
+hide empty members
+
+package "NestJS API" {
+  together {
+    class TeamsController <<controller>> {
+      + createTeam(competitionId, body)
+      + joinTeam(competitionId, accessCode)
+      + leaveTeam(competitionId)
+      + members(competitionId, teamId)
+    }
+    class FlagSubmissionController <<controller>> {
+      + submit(request, body): Promise<SubmissionResult>
+    }
+    class ScoreboardController <<controller>> {
+      + rankings(competitionId)
+    }
+  }
+
+  together {
+    class TeamsService <<service>> {
+      + createTeam(userId, competitionId, name)
+      + joinTeam(userId, competitionId, code)
+      + leaveTeam(userId, competitionId)
+    }
+    class FlagSubmissionService <<service>> {
+      + submit(userId, challengeId, flag): Promise<SubmissionResult>
+    }
+    class ScoreboardService <<service>> {
+      + rankings(competitionId)
+      + teamResults(competitionId, teamId)
+    }
+  }
+
+  together {
+    abstract class FlagSubmissionRepository <<repository>> {
+      + findChallenge(challengeId)
+      + findTeamId(userId, competitionId, at)
+      + hasTeamSolved(teamId, challengeId)
+      + recordSolution(solution)
+    }
+    class DatabaseFlagSubmissionRepository <<repository>>
+    class DatabaseService <<service>> {
+      + db: NodePgDatabase
+    }
+  }
+}
+
+' Usmjerene asocijacije oznacavaju reference na injektirane servise.
+TeamsController --> TeamsService
+FlagSubmissionController --> FlagSubmissionService
+ScoreboardController --> ScoreboardService
+
+TeamsService --> DatabaseService
+FlagSubmissionService --> FlagSubmissionRepository
+DatabaseFlagSubmissionRepository --|> FlagSubmissionRepository
+DatabaseFlagSubmissionRepository --> DatabaseService
+ScoreboardService --> DatabaseService
+
+@enduml
