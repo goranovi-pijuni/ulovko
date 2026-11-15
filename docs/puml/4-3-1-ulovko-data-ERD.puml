@@ -1,0 +1,114 @@
+@startuml
+' Relacijski model podataka sustava Ulovko (db/schema.ts)
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName DejaVu Sans
+skinparam backgroundColor white
+skinparam entity {
+  BackgroundColor #F5F8FD
+  BorderColor #57789E
+  FontColor #172B45
+}
+skinparam ArrowColor #65778A
+hide circle
+
+entity "Users" as Users {
+  * id : serial <<PK>>
+  --
+  * email : text <<UNIQUE>>
+  * oauthUserId : text <<UNIQUE>>
+  * displayName : text
+  * permLevel : integer
+  * creationTime : timestamp
+}
+
+entity "PermissionRequests" as PermissionRequests {
+  * id : serial <<PK>>
+  --
+  * requestedBy : integer <<FK>>
+  * requestTime : timestamp
+  verdictTime : timestamp
+  * result : boolean
+}
+
+entity "Teams" as Teams {
+  * id : serial <<PK>>
+  --
+  * name : text
+  * accessCode : text
+  * captain : integer <<FK>>
+  * foundingTime : timestamp
+}
+
+entity "Competitions" as Competitions {
+  * id : serial <<PK>>
+  --
+  * compName : text
+  * compStart : timestamp
+  * compEnd : timestamp
+  * organizedBy : integer <<FK>>
+  min : integer?
+  max : integer?
+  decay : integer?
+}
+
+entity "UserTeamComp" as UserTeamComp {
+  * userId : integer <<PK,FK>>
+  * teamId : integer <<PK,FK>>
+  * compId : integer <<PK,FK>>
+  --
+  * participationStartTime : integer
+  participationEndTime : integer
+}
+
+entity "Categories" as Categories {
+  * id : serial <<PK>>
+  --
+  * categoryName : text
+}
+
+entity "Challenges" as Challenges {
+  * id : serial <<PK>>
+  --
+  * competitionId : integer <<FK>>
+  * categoryId : integer <<FK>>
+  deployId : integer <<FK,UNIQUE>>
+  * challengeTitle : text
+  * publishingDate : timestamp
+  * isPublic : boolean
+  * flag : text
+  points : integer
+  * hasHandout : boolean
+  * hasDeploy : boolean
+}
+
+entity "Solutions" as Solutions {
+  * userId : integer <<PK,FK>>
+  * compId : integer <<PK,FK>>
+  * challengeId : integer <<PK,FK>>
+  --
+  * solveTime : timestamp
+}
+
+entity "Deployments" as Deployments {
+  * id : serial <<PK>>
+  --
+  * status : status
+  buildId : text
+  latestError : text
+}
+
+Users ||--o{ PermissionRequests : requestedBy
+Users ||--o{ Teams : captain
+Users ||--o{ Competitions : organizedBy
+Users ||--o{ UserTeamComp : userId
+Teams ||--o{ UserTeamComp : teamId
+Competitions ||--o{ UserTeamComp : compId
+Competitions ||--o{ Challenges : competitionId
+Categories ||--o{ Challenges : categoryId
+Users ||--o{ Solutions : userId
+Competitions ||--o{ Solutions : compId
+Challenges ||--o{ Solutions : challengeId
+Challenges |o--o| Deployments : deployId
+@enduml

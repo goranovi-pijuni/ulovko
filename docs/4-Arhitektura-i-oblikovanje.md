@@ -18,27 +18,18 @@ Za svaki UML dijagram čuvajte čitljivu sliku i PlantUML izvor, kako je opisano
 
 ## 4.1 Ključne arhitekturne odluke
 
-**Cilj:** Objasniti nekoliko arhitekturnih odluka koje najviše utječu na rješenje i navesti njihove projektno specifične razloge.
+Ulovko odvaja korisnički dio natjecanja od izvođenja potencijalno nepouzdanih servisa zadataka. Sljedeće odluke određuju granice odgovornosti, način pohrane i razmjenu podataka među dijelovima sustava.
 
 | Odluka | Razmatrana alternativa | Projektno specifično obrazloženje i kompromis |
 | --- | --- | --- |
-|  |  |  |
-
-Objasnite glavne arhitekturne odluke bez ponavljanja popisa tehnologija. Ako važna odluka ima ADR, dovoljno je u tablici navesti njegov ID.
-
-<details>
-<summary><strong>Primjer arhitekturnih odluka i kompromisa</strong></summary>
-
-**Primjer — CrisisMap:**
-
-| Odluka | Razmatrana alternativa | Projektno specifično obrazloženje i kompromis |
-| --- | --- | --- |
-| Klijent u pregledniku i jedan poslužiteljski API | Više zasebno postavljenih poslužiteljskih usluga | Klijent prikazuje kartu, dok poslužiteljski sustav provjerava i pohranjuje prijave. Jedan poslužiteljski sustav upravljiv je za ovaj opseg; njegov kvar može privremeno prekinuti rad s prijavama. Obrazloženje je u ADR-01. |
-| Relacijska pohrana prijava | Dokumentno orijentirana pohrana | Prijave imaju prepoznatljive veze s korisnicima i lokacijama. Relacijska shema te veze čini eksplicitnima, ali zahtijeva migracije kada se shema promijeni. |
-
-**Analiza primjera:** Obje odluke navode razlog vezan uz aplikaciju za prijavljivanje kriznih događaja i priznaju kompromis. Odluka o poslužiteljskom sustavu upućuje na ADR-01 umjesto ponavljanja cijele usporedbe. Moduli unutar jedne aplikacije koja se postavlja kao cjelina nisu zasebne mikrousluge. U vlastitoj tablici navedite alternative koje je tim doista razmatrao.
-
-</details>
+| **React aplikacija u pregledniku i jedan modularni NestJS API** | Poslužiteljski generirane stranice ili više neovisno postavljenih API usluga | Korisničko sučelje odvojeno je od poslovnih pravila, a NestJS moduli grupiraju prijavu, natjecanja, zadatke i predaje zastavica. Jedan API pojednostavljuje razvoj i autentikaciju za studentski tim, ali predstavlja zajedničku točku otkaza. |
+| **Challenge Runner na zasebnom poslužitelju** | Izvođenje zadataka zajedno s web-aplikacijom i bazom podataka | Zadaci sadrže proizvoljan korisnički kod i mogu trošiti znatne resurse. Zaseban Runner smanjuje utjecaj tih servisa na prijavu, bodovanje i ostale funkcije platforme. Cijena je dodatna infrastruktura i komunikacija između poslužitelja. |
+| **K3s za upravljanje kontejnerima zadataka** | Vlastiti sustav koji izravno pokreće Docker kontejnere i ručno upravlja mrežom | K3s pruža postojeće mehanizme za mrežne servise, izolaciju, ograničenja resursa i upravljanje instancama. Time se izbjegava pisanje vlastitog orkestratora, uz složeniju početnu konfiguraciju. Runner izlaže ograničeni API umjesto izravnog pristupa K3s-u iz web-aplikacije. |
+| **PostgreSQL i relacijski model podataka** | Dokumentna baza ili pohrana poslovnih zapisa u datotekama | Natjecanja, članstva korisnika u timovima i rješenja imaju jasne veze te zahtijevaju dosljedne identifikatore i ograničenja. Drizzle ORM povezuje TypeScript kod i SQL shemu. Promjene strukture podataka zahtijevaju nadzirane migracije. |
+| **Odvojena objektna pohrana ZIP paketa u Cloudflare R2** | Pohrana svih arhiva u PostgreSQL-u ili lokalnom datotečnom sustavu aplikacijskog poslužitelja | Relacijska baza čuva metapodatke, a R2 čuva `config.yaml`, `public.zip` i `deploy.zip`. Tako se velike datoteke ne prenose kroz relacijske tablice i Runner im može pristupati neovisno o aplikacijskom disku. Potrebno je koordinirati upis metapodataka i objekata te obraditi djelomične neuspjehe. |
+| **Provjera ZIP paketa prije pohrane i razdvajanje javnog i izvršnog sadržaja** | Pohrana i izravno izvođenje učitane arhive bez prethodne provjere | Organizator dostavlja jedinstven ZIP, ali sadržaj `public/` namijenjen je natjecateljima, a `deploy/` služi za izgradnju kontejnera. Provjeravaju se struktura arhive, putanje i `config.yaml`; preuzimanje javnog priloga ide kroz API uz provjeru prava pristupa. Takav postupak povećava složenost obrade pri učitavanju, ali smanjuje mogućnost izlaganja privatnih datoteka. |
+| **Google OAuth i poslužiteljska sesija umjesto vlastitih lozinki** | Lokalna registracija s pohranom i provjerom lozinki | Identitet potvrđuje vanjski pružatelj, dok aplikacija upravlja vlastitim ulogama i pristupom natjecanjima. Time se izbjegava održavanje zaporki, uz ovisnost o vanjskom pružatelju i potrebu za zaštitom sesije. |
+| **OpenAPI kao ugovor između backenda i frontenda** | Ručno pisani i neovisno održavani HTTP klijenti i modeli | NestJS objavljuje OpenAPI opis, a Orval iz njega generira TypeScript pozive i upite za React. Time se smanjuje ručno usklađivanje tipova, ali se promjene DTO-a moraju ispravno dokumentirati i generirani kod osvježiti. |
 
 ## 4.2 Gradivni blokovi i UML dijagram komponenata
 
@@ -53,77 +44,41 @@ Objasnite glavne arhitekturne odluke bez ponavljanja popisa tehnologija. Ako va�
 
 Započnite crtanjem granice oko predloženog sustava. Unutar nje prepoznajte dijelove s različitim odgovornostima; planiranu bazu podataka aplikacije smjestite unutar granice, a usluge trećih strana izvan nje. Važne veze označite podatkom ili uslugom koja njima prolazi. Logička komponenta može biti modul unutar jedne poslužiteljske aplikacije: zaseban pravokutnik ne znači zasebno postavljenu uslugu. Tijekom implementacije ažurirajte dijagram kada se promijene odgovornosti ili veze. U završnoj inačici čitatelj treba moći povezati njegove dijelove s kodom. Dijagram razmještaja odgovara na pitanje gdje se ti dijelovi stvarno izvode.
 
-<details>
-<summary><strong>Granica sustava, odgovornosti i vanjske ovisnosti</strong></summary>
-
-**Primjer — CrisisMap:** Predložena arhitektura podržava podnošenje prijava kriznih događaja, prikaz na karti i obavijesti o potvrđenim prijavama.
-
-![Dijagram komponenata sustava CrisisMap](./assets/diagrams/4-1-crisismap-system-CMP.svg)
-
-**Slika 4.1. Dijagram komponenata sustava CrisisMap**
-
-**PlantUML izvor:** [izvor](./puml/4-1-crisismap-system-CMP.puml)
-
-| Dio | Odgovornost | Razlog za ovu granicu |
-| --- | --- | --- |
-| Web-klijent | Prikazuje prijave i prikuplja podatke za novu prijavu. | Korisnička interakcija odvojena je od pravila prijave i trajne pohrane. |
-| API za prijave | Prihvaća zahtjeve za rad s prijavama i vraća odgovore. | Odgovornosti izložene putem HTTP-a odvojene su od obrade prijava. |
-| Usluga za prijave | Primjenjuje pravila prijave i pristupa pohranjenim prijavama. | Pravila provjere valjanosti i pohrane prijava imaju jasno mjesto odgovornosti. |
-| Proces za obavijesti | Određuje korisnike koji trebaju primiti obavijest i traži od vanjskog pružatelja da je pošalje. | Obrada obavijesti odvojena je od odgovaranja na korisnikov zahtjev za prijavu. |
-
-**Analiza primjera:** Vanjska granica odvaja predloženi sustav od pružatelja kartografskih usluga i pružatelja obavijesti. Unutarnja granica grupira API za prijave, uslugu za prijave i proces za obavijesti unutar jedne poslužiteljske aplikacije; njihovi zasebni simboli prikazuju predložene odgovornosti, a ne neovisno postavljene usluge. PostgreSQL pohranjuje podatke aplikacije, dok pružatelj kartografskih usluga osigurava kartografske pločice. Strelice sažimaju ovisnosti, a ne redoslijed transakcije; taj redoslijed prikazuje sekvencijski dijagram. Izostavite proces za obavijesti i Firebase Cloud Messaging ako obavijesti nisu dio odobrenog opsega. Pružatelja prijave u sustav uključite samo ako to zahtijeva odobreni zadatak. Kako implementacija napreduje, ispravite svaku predloženu granicu koja se pokaže netočnom; završni dijagram mora odgovarati onome što je tim izgradio. Jedan koherentan prikaz komponenata korisniji je od nekoliko gotovo jednakih inačica s proturječnim vezama.
-
-</details>
-
 ## 4.3 Model podataka i oblikovanje razreda
-
-**Cilj:** Objasniti važne informacije koje aplikacija pohranjuje i jedno reprezentativno područje oblikovanja na razini razreda. Model podataka i UML dijagram razreda odgovaraju na različita pitanja; jedno ne zamjenjuje drugo.
 
 ### 4.3.1 ER dijagram i model podataka
 
-**Cilj:** Prikazati važne pohranjene entitete, njihove identifikatore i veze te dovoljno atributa za razumijevanje podataka aplikacije. ER dijagram odvojen je od reprezentativnog UML dijagrama razreda u nastavku.
+![ER dijagram sustava Ulovko](./assets/diagrams/plantuml/4-3-1-ulovko-data-ERD.svg)
 
-**ER dijagram:** [Ugradite čitljiv dijagram projekta.]  
-**Izvor dijagrama:** [Poveznica na njegov izvor.]  
-**Implementacija:** [Navedite gdje je odgovarajući model podataka definiran u projektu.]
+**Slika 4.2.** Relacijski model podataka sustava Ulovko.
 
-<details>
-<summary><strong>Jedna prijava poplave i povezani podaci</strong></summary>
+**PlantUML izvor:** [4-3-1-ulovko-data-ERD.puml](./puml/4-3-1-ulovko-data-ERD.puml)
 
-**Primjer — CrisisMap:** Ana putem svojeg korisničkog računa podnosi prijavu poplave `R-104`. Odabire lokaciju na karti i označava razinu ozbiljnosti kao visoku. Građanin može podnijeti više prijava; svaka prijava pripada jednoj kategoriji kriznog događaja, primjerice *Poplava*. Aplikacija pohranjuje prijavu i njezine koordinate. Kartografske pločice dolaze od vanjskog pružatelja i nisu entiteti u modelu podataka aplikacije.
+**Implementacija:** [`db/schema.ts`](../db/schema.ts) (Drizzle ORM).
 
-![ER dijagram podataka sustava CrisisMap](./assets/diagrams/4-2-crisismap-data-ERD.svg)
+Središnji su entiteti `Users`, `Competitions` i `Challenges`. Korisnik može organizirati više natjecanja, a svako natjecanje ima jednog organizatora i više zadataka. Svaki zadatak pripada jednoj kategoriji (`Categories`) i sadrži metapodatke o objavi, vrijednosti bodova i očekivanoj zastavici. Zastavica je pohranjena u bazi radi provjere rješenja, ali nije dio javnog API odgovora.
 
-**Slika 4.2. ER dijagram podataka sustava CrisisMap**
+Tim (`Teams`) ima kapetana koji je korisnik sustava. Sudjelovanje korisnika u pojedinom natjecanju zapisuje se u poveznoj tablici `UserTeamComp`, s kompozitnim primarnim ključem `(userId, teamId, compId)` i vremenima početka i završetka sudjelovanja. Takav model omogućuje korisniku sudjelovanje u više natjecanja s različitim timovima. Pravilo da korisnik u jednom natjecanju pripada najviše jednom timu provjerava poslovna logika; sam navedeni kompozitni ključ ne jamči to pravilo. Evidencija uspješnih rješenja (`Solutions`) povezuje korisnika, natjecanje i zadatak te koristi kompozitni ključ `(userId, compId, challengeId)`, čime se sprječava višestruki zapis iste kombinacije.
 
-**PlantUML izvor:** [izvor](./puml/4-2-crisismap-data-ERD.puml)
+`PermissionRequests` bilježi zahtjeve za organizatorske ovlasti. `Deployments` sadrži stanje izgradnje i izvođenja servisa zadatka (`uploaded`, `building`, `built`, `deployed`, `error`), identifikator izgradnje i posljednju pogrešku. Veza preko `Challenges.deployId` neobavezna je i jedinstvena, pa zadatak bez izvršnih servisa ne mora imati zapis postavljanja, a pojedini zapis nije dijeljen među zadacima. Raspored natjecanja dodatno je ograničen pravilom `compEnd > compStart`.
 
-**Analiza primjera:** `R-104` ima jednog autora i jednu kategoriju; Ana i kategorija *Poplava* mogu biti povezane s više prijava. Dijagram prikazuje veze bez prepisivanja svih stupaca baze podataka ili pisanja drugog tabličnog opisa za svaki entitet. Ako aplikacija prihvaća i **anonimne** prijave, tu mogućnost prikažite u vezi s entitetom `Citizen`. Ako su kategorije fiksne vrijednosti, a ne pohranjeni zapisi, nemojte izmišljati tablicu kategorija. Završni ER dijagram usporedite s modelom trajne pohrane i objasnite samo razlike važne za razumijevanje projekta.
-
-</details>
+Datoteke nisu prikazane kao zasebni relacijski entiteti jer se arhive nalaze u Cloudflare R2: za svaki zadatak pohranjuju se odgovarajući `public.zip`, `deploy.zip` i `config.yaml`. Baza vodi oznake `hasHandout` i `hasDeploy`, a identitet natjecanja i zadatka određuje lokaciju objekata. Pristup tim datotekama kontrolira aplikacijski API.
 
 ### 4.3.2 Reprezentativni UML dijagram razreda
 
-**Cilj:** Prije implementacije reprezentativnog dijela sustava modelirati i prikazati razrede ili sučelja potrebna za dodjelu odgovornosti, operacija i veza. Oblikovanje ažurirajte kada se te odluke promijene.
+Za reprezentativni dio oblikovanja odabrana je **obrada ZIP paketa zadatka i njegovo postavljanje na Runner** (UC-012, UC-013). Taj dio obuhvaća provjeru podataka, trajnu pohranu i pozivanje izdvojenog izvršnog sustava, pa jasno pokazuje granice odgovornosti među razredima.
 
-**Dijagram razreda:** [Ugradite čitljiv UML dijagram razreda za reprezentativni dio oblikovanja.]  
-**PlantUML izvor:** [Poveznica na odgovarajuću `.puml` datoteku.]  
-**Referenca na kod pri završnom pregledu:** [Poveznica na odgovarajuću implementaciju.]
+![Dijagram razreda za obradu i postavljanje zadataka](./assets/diagrams/plantuml/4-3-2-ulovko-challenges-CD.svg)
 
-<details>
-<summary><strong>Oblikovanje odgovornosti prijave i dopuštenih promjena</strong></summary>
+**Slika 4.3.** Reprezentativni UML dijagram razreda za upravljanje zadacima.
 
-**Primjer — CrisisMap:** Prijava sadrži pravila za promjenu vlastitog statusa. Razred tijeka rada koordinira podnošenje i pregled, dok sučelje repozitorija opisuje potrebne operacije trajne pohrane. Dijagram predlaže te odgovornosti prije implementacije.
+**PlantUML izvor:** [4-3-2-ulovko-challenges-CD.puml](./puml/4-3-2-ulovko-challenges-CD.puml)
 
-![Dijagram razreda za obradu prijava kriznih događaja](./assets/diagrams/4-3-crisismap-domain-CD.svg)
+**Implementacija:** [`competitions.controller.ts`](../backend/src/competitions/competitions.controller.ts), [`competitions.service.ts`](../backend/src/competitions/competitions.service.ts), [`archive.service.ts`](../backend/src/challenge-packages/archive.service.ts), [`r2.service.ts`](../backend/src/challenge-packages/r2.service.ts) i [`challenge-deployments.service.ts`](../backend/src/competitions/challenge-deployments.service.ts).
 
-**Slika 4.3. Dijagram razreda za obradu prijava kriznih događaja**
+`CompetitionsController` prima HTTP zahtjeve te ih prosljeđuje odgovarajućim servisima. Prije organizatorskih radnji `CompetitionOwnerGuard` provjerava pripada li natjecanje prijavljenom organizatoru odnosno ima li korisnik administratorske ovlasti. `CompetitionsService` obrađuje metapodatke zadataka i koordinira `ArchiveService` i `R2Service`. `ArchiveService` provjerava ZIP i priprema `PreparedPackage`, čiji se privremeni sadržaj uklanja metodom `cleanup()`. `R2Service` pohranjuje datoteke i pri zamjeni ZIP-a nastoji očuvati prethodno stanje u slučaju neuspjeha.
 
-**PlantUML izvor:** [izvor](./puml/4-3-crisismap-domain-CD.puml)
-
-**Analiza primjera:** `DisasterReport` sadrži dopuštena pravila promjene stanja pa tijek rada ne može prešutno odobriti već odbijenu prijavu. `ReportWorkflow` koordinira operaciju bez preuzimanja pravila prijelaza stanja same prijave; `ReportRepository` definira potrebne operacije pohrane. Kompozicija `Location` i odabrani tipovi prikazuju veze korisne za oblikovanje. Dijagram namjerno izostavlja stupce baze podataka i nepovezane razrede: ER model objašnjava pohranjene podatke, dok ovaj dijagram dodjeljuje programske odgovornosti i operacije. Ti su razredi odluka oblikovanja, a ne obavezni slojevi za svaki tim. Završnu implementaciju usporedite s početnim oblikovanjem i ažurirajte dijagram tamo gdje su se odluke promijenile; generiranje dijagrama iz koda tek na kraju ne može zamijeniti ovo početno modeliranje.
-
-</details>
+`ChallengeDeploymentsService` zasebno upravlja tijekom izgradnje i postavljanja, dok `RunnerClient` pruža autentificirane HTTP operacije prema Runneru. Oba servisa koriste `DatabaseService` za pristup trajnom stanju. Time promjena načina izvođenja zadataka ne zahtijeva premještanje pravila za pohranu natjecanja, a `CompetitionsService` ne mora poznavati detalje K3s-a.
 
 ## 4.4 Ponašanje tijekom izvođenja
 

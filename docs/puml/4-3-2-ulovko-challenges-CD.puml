@@ -1,0 +1,82 @@
+@startuml
+' Reprezentativno oblikovanje: upravljanje ZIP paketima i pokretanjem zadataka
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName DejaVu Sans
+skinparam backgroundColor white
+skinparam class {
+  BackgroundColor #F5F8FD
+  BorderColor #57789E
+  ArrowColor #65778A
+}
+skinparam packageStyle rectangle
+hide empty members
+
+package "NestJS API" {
+  class CompetitionsController <<controller>> {
+    + createCompetition(body, request)
+    + uploadChallenge(competitionId, file, body)
+    + updateChallenge(competitionId, challengeId, file, body)
+    + deployChallenge(competitionId, challengeId)
+  }
+  class CompetitionOwnerGuard <<guard>> {
+    + canActivate(context): Promise<boolean>
+  }
+  class CompetitionsService <<service>> {
+    + createCompetition(body, organizerId)
+    + listChallenges(competitionId)
+    + uploadChallenge(competitionId, file, body)
+    + updateChallenge(competitionId, challengeId, file, body)
+    + downloadHandout(compId, taskId, user)
+  }
+  class ArchiveService <<service>> {
+    + prepare(uploadPath): Promise<PreparedPackage>
+  }
+  interface PreparedPackage {
+    + configPath?: string
+    + publicZip?: string
+    + deployZip?: string
+    + hasPublic: boolean
+    + hasDeploy: boolean
+    + cleanup(): Promise<void>
+  }
+  class R2Service <<service>> {
+    + upload(competitionId, taskId, pkg)
+    + replacePackage(competitionId, taskId, pkg, previous, commit)
+    + readHandout(competitionId, challengeId)
+  }
+  class ChallengeDeploymentsService <<service>> {
+    + start(competitionId, challengeId)
+    + status(competitionId, challengeId)
+    + publishedEndpoints(competitionId, challengeId)
+  }
+  class RunnerClient <<client>> {
+    + queue(competitionId, challengeId)
+    + build(buildId)
+    + deploy(competitionId, challengeId, buildId)
+    + challenge(competitionId, challengeId)
+  }
+  class DatabaseService <<service>> {
+    + db: NodePgDatabase
+  }
+}
+
+CompetitionsController --> CompetitionsService : delegira
+CompetitionsController --> ChallengeDeploymentsService : delegira
+CompetitionsController ..> CompetitionOwnerGuard : autorizacija
+CompetitionOwnerGuard --> DatabaseService : vlasništvo
+CompetitionsService --> DatabaseService : podaci zadataka
+CompetitionsService --> ArchiveService : validacija ZIP-a
+CompetitionsService --> R2Service : datoteke
+ArchiveService ..> PreparedPackage : priprema
+R2Service ..> PreparedPackage : pohranjuje
+ChallengeDeploymentsService --> DatabaseService : stanje objave
+ChallengeDeploymentsService --> RunnerClient : izgradnja / objava
+
+note right of RunnerClient
+  Autentificirani HTTP klijent
+  za izdvojeni Challenge Runner.
+end note
+
+@enduml
