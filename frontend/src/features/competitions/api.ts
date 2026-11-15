@@ -1,8 +1,10 @@
 // Feature-facing wrappers around the Orval-generated client. Components import
 // from here rather than from src/api/generated directly.
+import { useQueryClient } from '@tanstack/react-query';
 import {
   getCompetitionsGetByIdQueryKey,
   getCompetitionsGetCompetitionsQueryKey,
+  useCompetitionsCreateCompetition,
   useCompetitionsGetById,
   useCompetitionsGetCompetitions,
 } from '@/api/generated/endpoints/competitions/competitions';
@@ -26,6 +28,18 @@ export function useCompetition(id: number) {
     query: {
       // A missing competition stays missing; retry other failures once.
       retry: (failureCount, error) => error.status !== 404 && failureCount < 1,
+    },
+  });
+}
+
+export function useCreateCompetition() {
+  const queryClient = useQueryClient();
+  return useCompetitionsCreateCompetition({
+    mutation: {
+      onSuccess: (created) => {
+        queryClient.setQueryData(competitionKeys.detail(created.id), created);
+        void queryClient.invalidateQueries({ queryKey: competitionKeys.list() });
+      },
     },
   });
 }

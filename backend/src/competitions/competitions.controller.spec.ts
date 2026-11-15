@@ -8,6 +8,7 @@ import { CompetitionOwnerGuard } from './guards/competition-owner.guard.js';
 
 import { CompetitionsController } from './competitions.controller.js';
 import { CompetitionsService } from './competitions.service.js';
+import { ChallengeDeploymentsService } from './challenge-deployments.service.js';
 import type { Competition } from './interfaces/competition.interface.js';
 
 const example: Competition = {
@@ -30,7 +31,10 @@ describe('CompetitionsController', () => {
     uploadChallenge: vi.fn(),
     createCompetition: vi.fn(),
     listChallenges: vi.fn(),
+    listOrganizerChallenges: vi.fn(),
+    listChallengeCategories: vi.fn(),
     downloadHandout: vi.fn(),
+    updateChallenge: vi.fn(),
   };
 
   beforeEach(async () => {
@@ -43,6 +47,9 @@ describe('CompetitionsController', () => {
           provide: CompetitionsService,
           useValue: mockService,
         },
+        { provide: ChallengeDeploymentsService, useValue: {
+          start: vi.fn(), status: vi.fn(), publishedEndpoints: vi.fn(),
+        } },
       ],
     })
       .overrideGuard(AuthenticatedGuard)
@@ -102,6 +109,18 @@ describe('CompetitionsController', () => {
     mockService.listChallenges.mockResolvedValue([]);
     await expect(controller.listChallenges(1)).resolves.toEqual([]);
     expect(mockService.listChallenges).toHaveBeenCalledWith(1);
+  });
+
+  it('should list organizer challenges without relying on the public listing', async () => {
+    mockService.listOrganizerChallenges.mockResolvedValue([{ id: 10, isPublic: false }]);
+    await expect(controller.listOrganizerChallenges(1)).resolves.toEqual([{ id: 10, isPublic: false }]);
+    expect(mockService.listOrganizerChallenges).toHaveBeenCalledWith(1);
+    expect(mockService.listChallenges).not.toHaveBeenCalled();
+  });
+
+  it('should list selectable challenge categories', async () => {
+    mockService.listChallengeCategories.mockResolvedValue([{ id: 1, categoryName: 'Web' }]);
+    await expect(controller.listChallengeCategories()).resolves.toEqual([{ id: 1, categoryName: 'Web' }]);
   });
 
   it('should throw NotFoundException for missing IDs', async () => {

@@ -1,55 +1,45 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   Logger,
   NotFoundException,
   ServiceUnavailableException,
   ForbiddenException,
   StreamableFile,
-} from '@nestjs/common';
-import {
-  and,
-  countDistinct,
-  eq,
-  isNull,
-  lte,
-  sql,
-  type SQL,
-} from 'drizzle-orm';
-import { unlink } from 'node:fs/promises';
-import { DatabaseService } from '../database/database.service.js';
+} from "@nestjs/common";
+import { and, countDistinct, eq, isNull, lte, sql, type SQL } from "drizzle-orm";
+import { unlink } from "node:fs/promises";
+import { DatabaseService } from "../database/database.service.js";
 import {
   categories,
   challenges,
   competitions,
+  deployments,
   userTeamComp,
-} from '../database/schema.js';
-import { Role } from '../roles/roles.enum.js';
-import type { User } from '../users/interfaces/user.interface.js';
-import { ArchiveService } from '../challenge-packages/archive.service.js';
-import { R2Service } from '../challenge-packages/r2.service.js';
-import type {
-  Competition,
-  CompetitionStatus,
-} from './interfaces/competition.interface.js';
-import type { CreateCompetitionDto } from './dto/create-competition.dto.js';
+} from "../database/schema.js";
+import { Role } from "../roles/roles.enum.js";
+import type { User } from "../users/interfaces/user.interface.js";
+import { ArchiveService } from "../challenge-packages/archive.service.js";
+import { R2Service } from "../challenge-packages/r2.service.js";
+import type { Competition, CompetitionStatus } from "./interfaces/competition.interface.js";
+import type { CreateCompetitionDto } from "./dto/create-competition.dto.js";
+import type { PublicChallengeDto } from "./dto/public-challenge.dto.js";
+import type { OrganizerChallengeDto } from "./dto/organizer-challenge.dto.js";
+import type { ChallengeCategoryDto } from "./dto/challenge-category.dto.js";
 
 function status(start: Date, end: Date, now: Date): CompetitionStatus {
-  return now < start ? 'upcoming' : now >= end ? 'finished' : 'active';
+  return now < start ? "upcoming" : now >= end ? "finished" : "active";
 }
 function str(value: unknown, field: string, max = 4096): string {
-  if (typeof value !== 'string' || !value.trim() || value.length > max) {
+  if (typeof value !== "string" || !value.trim() || value.length > max) {
     throw new BadRequestException(`${field} mora biti tekst duljine 1-${max}`);
   }
   return value.trim();
 }
 function int(value: unknown, field: string, optional = false): number | null {
-  if (optional && (value === undefined || value === null || value === ''))
-    return null;
-  if (
-    (typeof value !== 'number' && typeof value !== 'string') ||
-    !/^\d+$/.test(String(value))
-  ) {
+  if (optional && (value === undefined || value === null || value === "")) return null;
+  if ((typeof value !== "number" && typeof value !== "string") || !/^\d+$/.test(String(value))) {
     throw new BadRequestException(`${field} mora biti pozitivan cijeli broj`);
   }
   const n = Number(value);
@@ -59,12 +49,10 @@ function int(value: unknown, field: string, optional = false): number | null {
 }
 function date(value: unknown, field: string): Date {
   if (
-    typeof value !== 'string' ||
+    typeof value !== "string" ||
     !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(value)
   ) {
-    throw new BadRequestException(
-      `${field} mora biti ISO 8601 datum s vremenskom zonom`,
-    );
+    throw new BadRequestException(`${field} mora biti ISO 8601 datum s vremenskom zonom`);
   }
   const result = new Date(value);
   if (!Number.isFinite(result.valueOf()))
@@ -72,8 +60,8 @@ function date(value: unknown, field: string): Date {
   return result;
 }
 function bool(value: unknown, field: string): boolean {
-  if (value === true || value === 'true') return true;
-  if (value === false || value === 'false') return false;
+  if (value === true || value === "true") return true;
+  if (value === false || value === "false") return false;
 
   throw new BadRequestException(`${field} mora biti boolean`);
 }
@@ -106,7 +94,7 @@ export class CompetitionsService {
     const now = new Date();
     return rows.map((row) => ({
       ...row,
-      description: row.description ?? '',
+      description: row.description ?? "",
       status: status(row.startsAt, row.endsAt, now),
     }));
   }
@@ -118,27 +106,21 @@ export class CompetitionsService {
     return found;
   }
 
-  async createCompetition(
-    body: CreateCompetitionDto,
-    organizerId: number,
-  ): Promise<Competition> {
-    const name = str(body.name, 'name', 200);
+  async createCompetition(body: CreateCompetitionDto, organizerId: number): Promise<Competition> {
+    const name = str(body.name, "name", 200);
     const description =
-      body.description === undefined
-        ? ''
-        : str(body.description, 'description', 10000);
-    const startsAt = date(body.startsAt, 'startsAt');
-    const endsAt = date(body.endsAt, 'endsAt');
-    if (startsAt >= endsAt)
-      throw new BadRequestException('endsAt mora biti nakon startsAt');
+      body.description === undefined ? "" : str(body.description, "description", 10000);
+    const startsAt = date(body.startsAt, "startsAt");
+    const endsAt = date(body.endsAt, "endsAt");
+    if (startsAt >= endsAt) throw new BadRequestException("endsAt mora biti nakon startsAt");
     // Never accept the owner ID from the request body. Passport rehydrates the
     // authenticated user's ID from PostgreSQL on every request.
-    const organisedBy = int(organizerId, 'organizerId')!;
-    const max = int(body.max, 'max', true),
-      min = int(body.min, 'min', true),
-      decay = int(body.decay, 'decay', true);
+    const organisedBy = int(organizerId, "organizerId")!;
+    const max = int(body.max, "max", true),
+      min = int(body.min, "min", true),
+      decay = int(body.decay, "decay", true);
     if (max !== null && min !== null && max < min)
-      throw new BadRequestException('max mora biti >= min');
+      throw new BadRequestException("max mora biti >= min");
     const [created] = await this.database.db
       .insert(competitions)
       .values({
@@ -160,23 +142,24 @@ export class CompetitionsService {
         .where(eq(competitions.id, created.id))
         .catch(() => undefined);
       this.logger.error(
-        'Could not create R2 bucket',
+        "Could not create R2 bucket",
         error instanceof Error ? error.stack : undefined,
       );
-      throw new ServiceUnavailableException('R2 bucket nije moguće pripremiti');
+      throw new ServiceUnavailableException("R2 bucket nije moguće pripremiti");
     }
     const result = await this.findById(created.id);
-    if (!result)
-      throw new ServiceUnavailableException('Natjecanje nije moguće dohvatiti');
+    if (!result) throw new ServiceUnavailableException("Natjecanje nije moguće dohvatiti");
     return result;
   }
 
-  async listChallenges(competitionId: number) {
+  async listChallenges(competitionId: number): Promise<PublicChallengeDto[]> {
     const competition = await this.findById(competitionId);
-    if (!competition) throw new NotFoundException('Natjecanje nije pronađeno');
-    // Public challenge listings must not reveal challenges before the event starts.
-    if (competition.startsAt > new Date()) return [];
-    // Never return flag or R2 credentials to the public frontend.
+    if (!competition) throw new NotFoundException("Natjecanje nije pronađeno");
+    const now = new Date();
+    if (competition.startsAt > now) return [];
+
+    // Expose only published, public metadata. Flags and deployment data must
+    // never be selected by this unauthenticated endpoint.
     return this.database.db
       .select({
         id: challenges.id,
@@ -184,16 +167,49 @@ export class CompetitionsService {
         challengeDescription: challenges.challengeDescription,
         publishingDate: challenges.publishingDate,
         points: challenges.points,
-        categoryId: challenges.categoryId,
+        categoryName: categories.categoryName,
+        hasHandout: challenges.hasHandout,
       })
       .from(challenges)
+      .innerJoin(categories, eq(challenges.categoryId, categories.id))
       .where(
         and(
           eq(challenges.competitionId, competitionId),
-          lte(challenges.publishingDate, new Date()),
+          eq(challenges.isPublic, true),
+          lte(challenges.publishingDate, now),
         ),
       )
       .orderBy(challenges.publishingDate);
+  }
+
+  // Categories are shared across competitions and used by the upload form.
+  listChallengeCategories(): Promise<ChallengeCategoryDto[]> {
+    return this.database.db
+      .select({ id: categories.id, categoryName: categories.categoryName })
+      .from(categories)
+      .orderBy(categories.categoryName);
+  }
+
+  // The controller requires authenticated ownership (or admin) before calling
+  // this. Do not reuse the public query: organizers must see unpublished tasks.
+  async listOrganizerChallenges(competitionId: number): Promise<OrganizerChallengeDto[]> {
+    return this.database.db
+      .select({
+        id: challenges.id,
+        challengeTitle: challenges.challengeTitle,
+        challengeDescription: challenges.challengeDescription,
+        publishingDate: challenges.publishingDate,
+        points: challenges.points,
+        categoryName: categories.categoryName,
+        categoryId: challenges.categoryId,
+        isPublic: challenges.isPublic,
+        hasHandout: challenges.hasHandout,
+        hasDeploy: challenges.hasDeploy,
+      })
+      .from(challenges)
+      .innerJoin(categories, eq(challenges.categoryId, categories.id))
+      .where(eq(challenges.competitionId, competitionId))
+      .orderBy(challenges.publishingDate, challenges.id);
   }
 
   async downloadHandout(
@@ -205,7 +221,7 @@ export class CompetitionsService {
     // accepts negative IDs, so reject them before querying the database.
     for (const id of [competitionId, challengeId]) {
       if (!Number.isSafeInteger(id) || id < 1 || id > 2147483647) {
-        throw new BadRequestException('Neispravan ID natjecanja ili zadatka');
+        throw new BadRequestException("Neispravan ID natjecanja ili zadatka");
       }
     }
 
@@ -220,15 +236,13 @@ export class CompetitionsService {
       })
       .from(challenges)
       .innerJoin(competitions, eq(challenges.competitionId, competitions.id))
-      .where(
-        and(eq(challenges.id, challengeId), eq(competitions.id, competitionId)),
-      )
+      .where(and(eq(challenges.id, challengeId), eq(competitions.id, competitionId)))
       .limit(1);
 
     // A task belonging to another competition is indistinguishable from a
     // missing task. Do not probe R2 for either case.
     if (!challenge) {
-      throw new NotFoundException('Zadatak nije pronađen u natjecanju');
+      throw new NotFoundException("Zadatak nije pronađen u natjecanju");
     }
 
     const privileged =
@@ -239,36 +253,24 @@ export class CompetitionsService {
       const [participant] = await this.database.db
         .select({ userId: userTeamComp.userId })
         .from(userTeamComp)
-        .where(
-          and(
-            eq(userTeamComp.userId, user.id),
-            eq(userTeamComp.compId, competitionId),
-          ),
-        )
+        .where(and(eq(userTeamComp.userId, user.id), eq(userTeamComp.compId, competitionId)))
         .limit(1);
       if (!participant) {
-        throw new ForbiddenException('Niste prijavljeni na ovo natjecanje');
+        throw new ForbiddenException("Niste prijavljeni na ovo natjecanje");
       }
       const now = new Date();
-      if (
-        !challenge.isPublic ||
-        now < challenge.compStart ||
-        now < challenge.publishingDate
-      ) {
-        throw new NotFoundException('Zadatak još nije dostupan');
+      if (!challenge.isPublic || now < challenge.compStart || now < challenge.publishingDate) {
+        throw new NotFoundException("Zadatak još nije dostupan");
       }
     }
 
     if (!challenge.hasHandout) {
-      throw new NotFoundException('Zadatak nema handout');
+      throw new NotFoundException("Zadatak nema handout");
     }
 
-    const { stream, length } = await this.r2.readHandout(
-      competitionId,
-      challengeId,
-    );
+    const { stream, length } = await this.r2.readHandout(competitionId, challengeId);
     return new StreamableFile(stream, {
-      type: 'application/zip',
+      type: "application/zip",
       disposition: `attachment; filename="challenge-${challengeId}-handout.zip"`,
       length,
     });
@@ -279,27 +281,26 @@ export class CompetitionsService {
     file: Express.Multer.File | undefined,
     body: Record<string, unknown>,
   ) {
-    if (!file?.path)
-      throw new BadRequestException('ZIP arhiva mora biti u polju file');
+    if (!file?.path) throw new BadRequestException("ZIP arhiva mora biti u polju file");
     try {
       if (!(await this.findById(competitionId)))
-        throw new NotFoundException('Natjecanje nije pronađeno');
-      const title = str(body.challengeTitle, 'challengeTitle', 200);
+        throw new NotFoundException("Natjecanje nije pronađeno");
+      const title = str(body.challengeTitle, "challengeTitle", 200);
       const description =
         body.challengeDescription === undefined
-          ? ''
-          : str(body.challengeDescription, 'challengeDescription', 10000);
-      const publishingDate = date(body.publishingDate, 'publishingDate');
-      const isPublic = bool(body.isPublic, 'isPublic');
-      const flag = str(body.flag, 'flag');
-      const points = int(body.points, 'points', true);
-      const categoryId = int(body.categoryId, 'categoryId')!;
+          ? ""
+          : str(body.challengeDescription, "challengeDescription", 10000);
+      const publishingDate = date(body.publishingDate, "publishingDate");
+      const isPublic = bool(body.isPublic, "isPublic");
+      const flag = str(body.flag, "flag");
+      const points = int(body.points, "points", true);
+      const categoryId = int(body.categoryId, "categoryId")!;
       const [category] = await this.database.db
         .select({ id: categories.id })
         .from(categories)
         .where(eq(categories.id, categoryId))
         .limit(1);
-      if (!category) throw new BadRequestException('Nepostojeći categoryId');
+      if (!category) throw new BadRequestException("Nepostojeći categoryId");
 
       // Validate first. Reserve the ID without inserting a row so an in-progress
       // upload never appears in public challenge listings.
@@ -310,9 +311,7 @@ export class CompetitionsService {
         );
         const challengeId = Number(reserved.rows[0]?.id);
         if (!Number.isSafeInteger(challengeId) || challengeId <= 0) {
-          throw new ServiceUnavailableException(
-            'Nije moguce rezervirati ID zadatka',
-          );
+          throw new ServiceUnavailableException("Nije moguce rezervirati ID zadatka");
         }
         let location: { bucket: string; prefix: string } | undefined;
         try {
@@ -335,18 +334,17 @@ export class CompetitionsService {
           if (location)
             await this.r2.cleanup(
               location.bucket,
-              ['config.yaml', 'public.zip', 'deploy.zip'].map(
+              ["config.yaml", "public.zip", "deploy.zip"].map(
                 (name) => `${location!.prefix}${name}`,
               ),
             );
           this.logger.error(
-            'Challenge upload failed',
+            "Challenge upload failed",
             error instanceof Error ? error.stack : undefined,
           );
-          throw new ServiceUnavailableException('Pohrana zadatka nije uspjela');
+          throw new ServiceUnavailableException("Pohrana zadatka nije uspjela");
         }
-        if (!location)
-          throw new ServiceUnavailableException('R2 lokacija nije dostupna');
+        if (!location) throw new ServiceUnavailableException("R2 lokacija nije dostupna");
         return {
           id: challengeId,
           competitionId,
@@ -362,6 +360,111 @@ export class CompetitionsService {
       }
     } finally {
       await unlink(file.path).catch(() => undefined);
+    }
+  }
+
+  async updateChallenge(
+    competitionId: number,
+    challengeId: number,
+    file: Express.Multer.File | undefined,
+    body: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      const allowed = new Set([
+        "challengeTitle",
+        "challengeDescription",
+        "publishingDate",
+        "isPublic",
+        "flag",
+        "points",
+        "categoryId",
+      ]);
+      if (Object.keys(body).some((key) => !allowed.has(key))) {
+        throw new BadRequestException("Nepoznato polje u izmjeni zadatka");
+      }
+      if (!Object.keys(body).length && !file) {
+        throw new BadRequestException("Nema promjena za spremanje");
+      }
+      const [existing] = await this.database.db
+        .select({
+          id: challenges.id,
+          hasHandout: challenges.hasHandout,
+          hasDeploy: challenges.hasDeploy,
+          deploymentStatus: deployments.status,
+        })
+        .from(challenges)
+        .leftJoin(deployments, eq(challenges.deployId, deployments.id))
+        .where(and(eq(challenges.id, challengeId), eq(challenges.competitionId, competitionId)))
+        .limit(1);
+      if (!existing) throw new NotFoundException("Zadatak nije pronađen");
+      if (
+        file &&
+        (existing.deploymentStatus === "building" || existing.deploymentStatus === "built")
+      ) {
+        throw new ConflictException("Pričekajte završetak izgradnje prije promjene ZIP arhive");
+      }
+
+      const changes: Partial<typeof challenges.$inferInsert> = {};
+      if (body.challengeTitle !== undefined)
+        changes.challengeTitle = str(body.challengeTitle, "challengeTitle", 200);
+      if (body.challengeDescription !== undefined) {
+        if (
+          typeof body.challengeDescription !== "string" ||
+          body.challengeDescription.length > 10000
+        )
+          throw new BadRequestException("challengeDescription mora biti tekst do 10000 znakova");
+        changes.challengeDescription = body.challengeDescription.trim();
+      }
+      if (body.publishingDate !== undefined)
+        changes.publishingDate = date(body.publishingDate, "publishingDate");
+      if (body.isPublic !== undefined) changes.isPublic = bool(body.isPublic, "isPublic");
+      if (body.flag !== undefined) changes.flag = str(body.flag, "flag");
+      if (body.points !== undefined) changes.points = int(body.points, "points", true);
+      if (body.categoryId !== undefined) {
+        const categoryId = int(body.categoryId, "categoryId")!;
+        const [category] = await this.database.db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(eq(categories.id, categoryId))
+          .limit(1);
+        if (!category) throw new BadRequestException("Nepostojeća kategorija");
+        changes.categoryId = categoryId;
+      }
+
+      let pkg: Awaited<ReturnType<ArchiveService["prepare"]>> | undefined;
+      try {
+        if (file) {
+          if (!file.path) throw new BadRequestException("Neispravna ZIP datoteka");
+          pkg = await this.archive.prepare(file.path);
+          changes.hasHandout = pkg.hasPublic;
+          changes.hasDeploy = pkg.hasDeploy;
+          await this.r2.replacePackage(
+            competitionId,
+            challengeId,
+            pkg,
+            { hasPublic: existing.hasHandout, hasDeploy: existing.hasDeploy },
+            async () => {
+              await this.database.db
+                .update(challenges)
+                .set(changes)
+                .where(
+                  and(eq(challenges.id, challengeId), eq(challenges.competitionId, competitionId)),
+                );
+            },
+          );
+        } else {
+          await this.database.db
+            .update(challenges)
+            .set(changes)
+            .where(
+              and(eq(challenges.id, challengeId), eq(challenges.competitionId, competitionId)),
+            );
+        }
+      } finally {
+        await pkg?.cleanup();
+      }
+    } finally {
+      if (file?.path) await unlink(file.path).catch(() => undefined);
     }
   }
 }

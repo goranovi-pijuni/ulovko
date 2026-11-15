@@ -6,9 +6,20 @@
  * OpenAPI spec version: 1.0
  */
 
+export * from './challengeCategoryDto';
+export * from './challengeEndpointDto';
+export * from './challengeEndpointDtoProtocol';
 export * from './competitionDto';
 export * from './competitionStatus';
+export * from './competitionsUpdateChallengeBody';
 export * from './competitionsUploadChallengeBody';
 export * from './createCompetitionDto';
+export * from './deploymentStatusDto';
+export * from './deploymentStatusDtoStatus';
+export * from './organizerChallengeDto';
+export * from './publicChallengeDto';
+export * from './submissionResponseDto';
+export * from './submissionResponseDtoStatus';
+export * from './submitFlagDto';
 export * from './userProfileDto';
 export * from './userProfileDtoPermLevel';

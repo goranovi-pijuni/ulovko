@@ -1,4 +1,4 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
 import {
   ApiCookieAuth,
   ApiOkResponse,
@@ -64,8 +64,11 @@ export class AuthController {
     return { msg: 'Welcome, admin!' };
   }
 
-  @Get('logout')
+  @Post('logout')
   @UseGuards(AuthenticatedGuard)
+  @ApiCookieAuth('session')
+  @ApiOperation({ summary: 'Odjava prijavljenog korisnika' })
+  @ApiUnauthorizedResponse({ description: 'Potrebna je prijava' })
   async logout(@Req() req: Request, @Res() res: Response) {
     req.logout((err) => {
       if (err) {
