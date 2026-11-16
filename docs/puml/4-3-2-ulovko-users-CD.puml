@@ -1,0 +1,119 @@
+@startuml
+' UML dijagram razreda: prijava, profil korisnika i organizatorske ovlasti.
+' Razredi prikazuju odgovornosti u cjelovitom modelu sustava.
+
+top to bottom direction
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 13
+skinparam ArrowColor #71849C
+skinparam ArrowThickness 1.2
+skinparam nodesep 42
+skinparam ranksep 58
+skinparam packageStyle rectangle
+skinparam package {
+  BackgroundColor #FCFDFE
+  BorderColor #CED8E6
+  FontColor #33455D
+  FontSize 14
+}
+skinparam class {
+  BackgroundColor #F7FAFE
+  HeaderBackgroundColor #ECF1F8
+  BorderColor #A4B4CC
+  FontColor #1E2D44
+  AttributeFontColor #263750
+  StereotypeFontColor #536782
+
+  BackgroundColor<<controller>> #EAF2FF
+  BorderColor<<controller>> #86A9D6
+  BackgroundColor<<service>> #EDF7F5
+  BorderColor<<service>> #8BB9B0
+  BackgroundColor<<guard>> #FFF4E8
+  BorderColor<<guard>> #D5AE84
+  BackgroundColor<<strategy>> #F1EEFB
+  BorderColor<<strategy>> #AB9BD1
+}
+skinparam stereotypeCBackgroundColor<<controller>> #8EB2E0
+skinparam stereotypeCBackgroundColor<<service>> #84B8AD
+skinparam stereotypeCBackgroundColor<<guard>> #D6AB7B
+skinparam stereotypeCBackgroundColor<<strategy>> #A99BD3
+hide empty members
+
+package "NestJS API" {
+  together {
+    class AuthController <<controller>> {
+      + handleLogin()
+      + handleRedirect(response)
+      + getProfile(request)
+      + logout(request, response)
+    }
+    class UsersController <<controller>> {
+      + updateProfile(userId, body)
+      + history(userId)
+    }
+    class PermissionRequestsController <<controller>> {
+      + submit(userId)
+      + pending()
+      + review(requestId, approved)
+    }
+  }
+
+  together {
+    class GoogleAuthGuard <<guard>> {
+      + canActivate(context)
+    }
+    class GoogleStrategy <<strategy>> {
+      + validate(accessToken, refreshToken, profile)
+    }
+    class SessionSerializer <<service>> {
+      + serializeUser(user, done)
+      + deserializeUser(id, done)
+    }
+  }
+
+  together {
+    class AuthService <<service>> {
+      + validateUser(profile)
+      + findUser(id)
+    }
+    class UsersService <<service>> {
+      + updateProfile(userId, changes)
+      + history(userId)
+    }
+    class PermissionRequestsService <<service>> {
+      + create(userId)
+      + pending()
+      + resolve(requestId, adminId, approved)
+    }
+  }
+
+  together {
+    class RoleGuard <<guard>> {
+      + canActivate(context): boolean
+    }
+    class DatabaseService <<service>> {
+      + db: NodePgDatabase
+    }
+  }
+}
+
+' Pune strelice predstavljaju injektirane ovisnosti; isprekidane
+' ovisnosti prema konfiguriranim cuvarima ili Passport strategiji.
+AuthController ..> GoogleAuthGuard
+GoogleAuthGuard ..> GoogleStrategy
+GoogleStrategy --> AuthService
+SessionSerializer --> AuthService
+AuthService --> DatabaseService
+
+UsersController --> UsersService
+UsersService --> DatabaseService
+
+PermissionRequestsController --> PermissionRequestsService
+PermissionRequestsController ..> RoleGuard
+PermissionRequestsService --> DatabaseService
+
+@enduml

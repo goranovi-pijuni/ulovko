@@ -1,0 +1,72 @@
+@startuml
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam backgroundColor white
+skinparam defaultFontName DejaVu Sans
+skinparam usecase {
+  BackgroundColor #F5F8FD
+  BorderColor #57789E
+  ArrowColor #65778A
+}
+skinparam rectangle {
+  BorderColor #526B86
+}
+
+actor "Posjetitelj\n(A-01)" as Visitor
+actor "Natjecatelj\n(A-02)" as Player
+actor "Organizator\n(A-03)" as Organizer
+actor "Administrator\n(A-04)" as Admin
+actor "Google\n(A-05)" as IdP
+actor "Discord\n(A-06)" as Discord
+
+Visitor <|-- Player
+Player <|-- Organizer
+Organizer <|-- Admin
+
+rectangle "Ulovko" {
+  package "Javni dio i korisnički račun" {
+    usecase "UC-001\nPregled natjecanja" as UC001
+    usecase "UC-002\nPrijava u sustav" as UC002
+    usecase "UC-010\nPregled ljestvice" as UC010
+    usecase "UC-011\nProfil i povijest" as UC011
+  }
+  package "Sudjelovanje u natjecanju" {
+    usecase "UC-006\nOsnivanje tima" as UC006
+    usecase "UC-007\nPridruživanje timu" as UC007
+    usecase "UC-008\nPregled zadataka i resursa" as UC008
+    usecase "UC-009\nPredaja zastavice" as UC009
+  }
+  package "Organizacija natjecanja" {
+    usecase "UC-003\nZahtjev za ovlasti" as UC003
+    usecase "UC-005\nStvaranje i uređivanje natjecanja" as UC005
+    usecase "UC-012\nStvaranje i uređivanje zadataka" as UC012
+    usecase "UC-013\nUčitavanje ZIP paketa" as UC013
+    usecase "UC-014\nStatistika natjecanja" as UC014
+  }
+  package "Administracija" {
+    usecase "UC-004\nObrada zahtjeva za ovlasti" as UC004
+    usecase "UC-015\nNadzor servisa zadataka" as UC015
+  }
+}
+
+Visitor --> UC001
+Visitor --> UC002
+Visitor --> UC010
+Player --> UC003
+Player --> UC006
+Player --> UC007
+Player --> UC008
+Player --> UC009
+Player --> UC011
+Organizer --> UC005
+Organizer --> UC012
+Organizer --> UC013
+Organizer --> UC014
+Admin --> UC004
+Admin --> UC015
+
+UC002 -- IdP : potvrda identiteta
+UC012 -- Discord : obavijest pri objavi
+@enduml

@@ -1,140 +1,186 @@
 # 3. Obrasci uporabe
 
-**Cilj:** Prikazati glavne interakcije između aktera aplikacije i sustava. Opišite kako akter ostvaruje cilj i što se događa kada važan korak ne uspije. Interakcije temeljite na odobrenim zahtjevima i ažurirajte ih kako se aplikacija razvija.
+Obrasci uporabe opisuju ciljeve koje korisnici ostvaruju u sustavu Ulovko i njegove odgovore na njihove radnje. Akteri su preuzeti iz [analize zahtjeva](./2-Analiza-zahtjeva.md#23-dionici-i-akteri), a veze s funkcijskim zahtjevima prikazane su u [matrici sljedivosti](./2-Analiza-zahtjeva.md#26-sljedivost-zahtjeva).
 
 ## 3.1 Dijagram obrazaca uporabe
 
-**Cilj:** Prikazati granicu sustava, relevantne aktere i njihove glavne ciljeve u **preglednom UML dijagramu obrazaca uporabe**. Ako je za razumijevanje pojedinog dijela sustava potrebno prikazati više detalja, taj dio izdvojite u dodatni usmjereni dijagram. Dodatni dijagrami trebaju produbiti dio preglednog modela, a ne stvarati nepovezane ili duplicirane prikaze istog sustava.
+![Dijagram obrazaca uporabe sustava Ulovko](./assets/diagrams/plantuml/3-1-ulovko-system-UC.svg)
 
-![Dijagram obrazaca uporabe sustava CrisisMap](./assets/diagrams/3-1-crisismap-system-UC.svg)
+**Slika 3.1.** Dijagram obrazaca uporabe sustava Ulovko.
 
-**Slika 3.1. Dijagram obrazaca uporabe sustava CrisisMap**
+**PlantUML izvor:** [3-1-ulovko-system-UC.puml](./puml/3-1-ulovko-system-UC.puml)
 
-**PlantUML izvor:** [izvor](./puml/3-1-crisismap-system-UC.puml)
-
-**Provjera dijagrama:** Prikažite prepoznate uloge koje **komuniciraju s aplikacijom**, a ne dionike koji s njom nemaju interakciju. Svaki glavni korisnički cilj mora imati pridruženog aktera; uključeni obrazac uporabe može se dosegnuti preko drugog obrasca uporabe bez vlastite izravne veze s akterom. `<<include>>` i `<<extend>>` koristite samo kada odnos odgovara stvarnom ponašanju.
-
-<details>
-<summary><strong>Primjer aktera i granica sustava</strong></summary>
-
-**Opis primjera — CrisisMap:**
-
-Dijagram prikazuje **ogledni scenarij** s građaninom, posjetiteljem i koordinatorom pomoći te vanjskim pružateljem identiteta. Pružatelj identiteta sudjeluje u obrascu uporabe „Prijava u sustav” kao sekundarni akter: korisnik pokreće prijavu u aplikaciji, a vanjski sustav provodi autentikaciju. Budući da projekt koristi vanjskog pružatelja identiteta, ta se ovisnost prikazuje i u dijagramu obrazaca uporabe; tehnički detalji integracije pripadaju arhitekturnoj dokumentaciji.
-
-**Odabir aktera i ciljeva:** Granica pokazuje što aplikacija nudi, akteri imaju različite ciljeve, a nijedan akter ni obrazac uporabe ne tvrdi da ova studentska aplikacija angažira hitne službe. Dijagram usporedite s odobrenim funkcijskim zahtjevima i akterima.
-
-
-**Pet pitanja za odabir sadržaja dijagrama** (ne pet dijagrama za predaju):
-
-| Fokus | Pitanje |
-| --- | --- |
-| Cijeli sustav | Koji korisnički ciljevi najbolje objašnjavaju čemu ova aplikacija služi? |
-| Ključne funkcionalnosti | Koje ciljeve treba detaljnije opisati ili, ako je potrebno, prikazati zasebnim usmjerenim dijagramom? |
-| Korisničke uloge | Koji akteri mogu sudjelovati u pojedinom cilju i kako se njihove ovlasti razlikuju? |
-| Ključni procesi | Koji cilj ima važne alternative koje treba opisati u obrascu uporabe? |
-| Vanjske integracije | Sudjeluje li drugi sustav u obrascu uporabe kao **sekundarni akter**, primjerice odobreni pružatelj identiteta pri prijavi? |
-
-Vanjski sustav može biti sekundarni akter obrasca uporabe kada sudjeluje u ostvarenju korisničkog cilja; tehničke veze opisuju se u arhitekturi. Nemojte stvarati dodatni obavezni dijagram obrazaca uporabe samo radi popisa integracija. Prenatrpan dijagram podijelite prema povezanim akterima ili ciljevima samo kada time postaje čitljiviji.
-
-</details>
+Dijagram prikazuje četiri korisničke uloge: posjetitelja (A-01), natjecatelja (A-02), organizatora (A-03) i administratora (A-04). Uloge s višim ovlastima zadržavaju mogućnosti nižih uloga. Vanjski pružatelj identiteta (A-05) sudjeluje u prijavi, a Discord (A-06) prima obavijesti povezane s objavom zadataka. Oba su vanjska sustava sekundarni akteri.
 
 ## 3.2 Specifikacije obrazaca uporabe
 
-**Cilj:** Za svaki obrazac uporabe iz dijagrama objasniti cilj aktera, uobičajenu interakciju s aplikacijom i važne alternative. Jednostavne obrasce uporabe opišite kratko; proširite one kod kojih alternative, vanjske ovisnosti ili posljedice zahtijevaju dodatno objašnjenje.
-
-**Za svaki obrazac uporabe koristite jednu okomitu tablicu.** Navedite samo onoliko pojedinosti koliko interakcija zahtijeva; neprimjenjivu alternativu izostavite umjesto da je popunjavate samo radi forme.
-
-### UC-[ID]: [Naziv usmjeren na cilj]
+### UC-001: Pregled natjecanja
 
 | Element specifikacije | Opis |
 | :--- | :--- |
-| **Primarni akter** | [Uloga definirana u analizi zahtjeva] |
-| **Povezani zahtjevi** | [Identifikatori funkcijskih zahtjeva, npr. F-001, F-004] |
-| **Preduvjeti** | [Stanje sustava koje mora biti zadovoljeno prije početka izvođenja] |
-| **Glavni uspješni tok** | 1. Akter pokreće akciju.<br>2. Program obrađuje unos i vraća povratnu informaciju.<br>3. [Koračni prikaz interakcije do ostvarenja cilja] |
-| **Alternativni tokovi / Iznimke** | **[Korak]a — [Naziv iznimke]:** [Uvjet nastanka, reakcija programa i nastavak toka] |
-| **Posljedice (ishod)** | [Promjena stanja podataka ili potvrda nakon uspješnog završetka] |
+| **Primarni akter** | Posjetitelj (A-01) |
+| **Povezani zahtjevi** | F-003 |
+| **Preduvjeti** | Nema. |
+| **Glavni uspješni tok** | 1. Posjetitelj otvara popis natjecanja.<br>2. Sustav prikazuje javna natjecanja, njihovo vrijeme održavanja i status (nadolazeće, u tijeku ili završeno).<br>3. Posjetitelj odabire natjecanje.<br>4. Sustav prikazuje naziv, opis, raspored i javne informacije o odabranom natjecanju. |
+| **Alternativni tokovi / iznimke** | **2a — Nema natjecanja:** Sustav prikazuje prazan popis s odgovarajućom porukom.<br>**4a — Natjecanje ne postoji ili nije javno dostupno:** Sustav ne prikazuje njegove podatke i obavještava posjetitelja.<br>**2b — Dohvat nije uspio:** Sustav prikazuje pogrešku i omogućuje ponovni pokušaj. |
+| **Posljedice (ishod)** | Posjetitelj dobiva pregled dostupnih natjecanja bez prijave u sustav. |
 
-<details>
-<summary><strong>Primjeri specifikacija: Registracija i prijava kriznog događaja</strong></summary>
+### UC-002: Prijava u sustav
 
-**Primjer — CrisisMap:**
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Posjetitelj (A-01); sekundarni akter: vanjski pružatelj identiteta (A-05) |
+| **Povezani zahtjevi** | F-001 |
+| **Preduvjeti** | Korisnik nije prijavljen i može pristupiti vanjskom pružatelju identiteta. |
+| **Glavni uspješni tok** | 1. Korisnik odabire prijavu putem Google računa.<br>2. Sustav preusmjerava korisnika vanjskom pružatelju identiteta.<br>3. Korisnik potvrđuje identitet kod pružatelja.<br>4. Sustav prihvaća potvrđeni identitet, pronalazi ili otvara korisnički račun i uspostavlja sesiju.<br>5. Korisnik se vraća u aplikaciju s pristupom funkcijama svoje uloge. |
+| **Alternativni tokovi / iznimke** | **3a — Korisnik odustaje ili prijava ne uspije:** Sesija se ne otvara i korisnik može ponoviti prijavu.<br>**4a — Identitet nije moguće provjeriti:** Sustav odbija prijavu i ne dopušta zaštićene radnje.<br>**5a — Odjava:** Na zahtjev prijavljenog korisnika sustav prekida sesiju i vraća ga na javni dio aplikacije. |
+| **Posljedice (ishod)** | Korisnik ima valjanu sesiju i pripadajuće ovlasti, ili ostaje neprijavljen. |
 
-**UC-001: Registracija računa.** Ovaj kratki primjer odnosi se na projekt čiji odobreni zadatak uključuje račune s adresom e-pošte i lozinkom.
+### UC-003: Podnošenje zahtjeva za organizatorske ovlasti
 
-| Polje | Opis |
-| --- | --- |
-| Primarni akter | Građanin (A-02 u primjeru) |
-| ID zahtjeva | F-001 |
-| Preduvjeti, ako postoje | Nema. |
-| Glavni tijek | Građanin unosi adresu e-pošte; aplikacija šalje poveznicu za potvrdu; građanin potvrđuje račun. |
-| Alternativni ili neuspješni tijekovi, ako postoje | Adresa e-pošte već postoji → aplikacija objašnjava zašto se registracija ne može nastaviti. |
-| Rezultat | Račun je aktivan nakon potvrde. |
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Natjecatelj (A-02) |
+| **Povezani zahtjevi** | F-002 |
+| **Preduvjeti** | Korisnik je prijavljen i nema organizatorske ovlasti. |
+| **Glavni uspješni tok** | 1. Natjecatelj otvara mogućnost zahtjeva za organizatorske ovlasti.<br>2. Sustav prikazuje podatke potrebne za podnošenje zahtjeva.<br>3. Natjecatelj ispunjava zahtjev i potvrđuje slanje.<br>4. Sustav pohranjuje zahtjev za administratorski pregled i prikazuje njegov status. |
+| **Alternativni tokovi / iznimke** | **3a — Nedostaju obvezni podaci:** Sustav traži dopunu bez pohrane zahtjeva.<br>**4a — Zahtjev već čeka obradu:** Sustav prikazuje postojeći status umjesto stvaranja duplikata.<br>**4b — Pohrana nije uspjela:** Sustav prijavljuje neuspjeh podnošenja. |
+| **Posljedice (ishod)** | Zahtjev je evidentiran; korisničke se ovlasti ne mijenjaju prije administratorske odluke. |
 
-Ako odobreni zadatak umjesto toga koristi isključivo OAuth prijavu, zamijenite ovaj primjer odgovarajućim ponašanjem prijave; nemojte dodavati registraciju lokalnom lozinkom samo radi podudaranja s primjerom.
+### UC-004: Obrada zahtjeva za organizatorske ovlasti
 
-**UC-002: Podnošenje prijave kriznog događaja.** Ista polja mogu opisati dulji tijek u kojem odabir lokacije, provjera valjanosti i pohrana mogu ne uspjeti.
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Administrator (A-04) |
+| **Povezani zahtjevi** | F-002 |
+| **Preduvjeti** | Administrator je prijavljen; postoji zahtjev za obradu. |
+| **Glavni uspješni tok** | 1. Administrator otvara popis zahtjeva.<br>2. Sustav prikazuje podnositelja, sadržaj i status odabranog zahtjeva.<br>3. Administrator odobrava ili odbija zahtjev.<br>4. Sustav bilježi odluku i mijenja status zahtjeva.<br>5. Ako je zahtjev odobren, podnositelj dobiva organizatorske ovlasti. |
+| **Alternativni tokovi / iznimke** | **3a — Administrator odustaje:** Zahtjev ostaje nepromijenjen.<br>**4a — Zahtjev je već obrađen:** Sustav odbija ponovnu obradu i prikazuje trenutačno stanje.<br>**4b — Nedostatne ovlasti:** Sustav odbija radnju i ne mijenja podatke. |
+| **Posljedice (ishod)** | Zahtjev ima zabilježenu odluku, a korisničke se ovlasti mijenjaju samo nakon odobrenja. |
 
-| Polje | Opis |
-| --- | --- |
-| Primarni akter | Građanin |
-| ID zahtjeva | F-004 |
-| Preduvjeti, ako postoje | Obrazac za prijavu dostupan je. Ako odobreni zadatak zahtijeva prijavu u sustav, građanin je prijavljen. |
-| Glavni tijek | 1. Građanin otvara obrazac za prijavu; aplikacija prikazuje polja za vrstu kriznog događaja, razinu ozbiljnosti, opis i lokaciju.<br>2. Građanin unosi podatke i odabire lokaciju na karti ili drugim podržanim načinom.<br>3. Građanin podnosi obrazac; aplikacija provjerava obavezna polja i lokaciju.<br>4. Aplikacija pohranjuje prijavu i prikazuje potvrdu s referencom na nju. |
-| Alternativni ili neuspješni tijekovi, ako postoje | **1a — Prijava u sustav nije uspjela:** Ako je prijava obavezna, a pružatelj identiteta je ne dovrši, prijava kriznog događaja ostaje nepodnesena i aplikacija objašnjava kako pokušati ponovno.<br>**2a — Odbijen pristup lokaciji:** Ako aplikacija nudi geolokaciju, ali je korisnik odbije, građanin ručno odabire lokaciju ako ta mogućnost postoji; tijek se nastavlja u koraku 3.<br>**3a — Nevaljana ili nedostajuća lokacija:** Aplikacija objašnjava problem, po mogućnosti zadržava unesene podatke i ne pohranjuje prijavu; građanin ispravlja lokaciju i ponavlja korak 3.<br>**3b — Pohrana nije uspjela:** Aplikacija prijavljuje neuspjeh i ne prikazuje lažnu potvrdu o podnošenju. |
-| Rezultat | Aplikacija pohranjuje prijavu kriznog događaja i potvrđuje njezino podnošenje. |
+### UC-005: Stvaranje i uređivanje natjecanja
 
-**Odabir razine detalja:** Oba primjera koriste ista polja. UC-001 je kratak jer je glavna iznimka jasna; UC-002 zahtijeva numerirane korake i alternative jer oni mijenjaju ishod i mogu usmjeravati ispitivanje.Pri prilagodbi primjera koristite ID-ove zahtjeva i ponašanje vlastite aplikacije.
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Organizator (A-03) |
+| **Povezani zahtjevi** | F-004 |
+| **Preduvjeti** | Organizator je prijavljen i ima odgovarajuće ovlasti. |
+| **Glavni uspješni tok** | 1. Organizator otvara organizacijski dio aplikacije te odabire stvaranje natjecanja ili vlastito postojeće natjecanje.<br>2. Sustav prikazuje obrazac s nazivom, opisom, vremenom početka i završetka te postavkama natjecanja.<br>3. Organizator unosi ili mijenja podatke i potvrđuje spremanje.<br>4. Sustav provjerava valjanost rasporeda, podataka i organizatorovih ovlasti.<br>5. Sustav pohranjuje natjecanje i prikazuje njegove detalje u organizacijskom sučelju. |
+| **Alternativni tokovi / iznimke** | **4a — Nevaljan raspored ili obvezni podaci:** Sustav prikazuje pogreške i zadržava unos radi ispravka.<br>**4b — Uređivanje tuđeg natjecanja:** Sustav odbija promjenu.<br>**5a — Pohrana nije uspjela:** Sustav ne prikazuje potvrdu o uspjehu i omogućuje ponovni pokušaj. |
+| **Posljedice (ishod)** | Natjecanje je stvoreno ili su njegove dopuštene postavke ažurirane. Po isteku natjecanja sustav pokreće postupak uklanjanja pripadajućih servisa. |
 
-**UC-005: Moderiranje prijave kriznog događaja.** Ovaj primjer vrijedi samo za projekt u kojem odobreni opseg uključuje moderatorski pregled prijava.
+### UC-006: Osnivanje tima
 
-| Polje | Opis |
-| --- | --- |
-| Primarni akter | Moderator (A-05 u primjeru) |
-| ID zahtjeva | F-008 |
-| Preduvjeti, ako postoje | Moderator je prijavljen i ima moderatorske ovlasti; postoji prijava koja čeka pregled. |
-| Glavni tijek | 1. Moderator otvara prijavu koja čeka pregled.<br>2. Aplikacija prikazuje podatke prijave i dostupne moderatorske radnje.<br>3. Moderator odabire odobravanje ili odbijanje.<br>4. Aplikacija provjerava ovlasti, mijenja status prijave i prikazuje novi status. |
-| Alternativni ili neuspješni tijekovi, ako postoje | **3a — Radnja nije potvrđena:** Moderator odustaje od promjene i prijava ostaje nepromijenjena.<br>**4a — Ovlasti nisu valjane:** Aplikacija odbija promjenu i status prijave ostaje nepromijenjen. |
-| Rezultat | Prijava ima novi status ako je moderatorska radnja uspješno provedena; inače ostaje nepromijenjena. |
-</details>
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Natjecatelj (A-02) |
+| **Povezani zahtjevi** | F-005, F-006 |
+| **Preduvjeti** | Natjecatelj je prijavljen i nije član drugog tima u odabranom natjecanju. |
+| **Glavni uspješni tok** | 1. Natjecatelj otvara stranicu natjecanja i odabire osnivanje tima.<br>2. Sustav prikazuje obrazac za naziv tima.<br>3. Natjecatelj unosi naziv i potvrđuje osnivanje.<br>4. Sustav stvara tim za odabrano natjecanje, osnivača postavlja kao člana odnosno kapetana i omogućuje dijeljenje pristupnog koda.<br>5. Sustav prikazuje podatke novog tima. |
+| **Alternativni tokovi / iznimke** | **3a — Nevaljan naziv ili nedopušteni podaci:** Sustav traži ispravak.<br>**4a — Korisnik već pripada timu istog natjecanja:** Sustav odbija stvaranje drugog članstva.<br>**4b — Pohrana nije uspjela:** Tim nije osnovan. |
+| **Posljedice (ishod)** | Tim i članstvo osnivača povezani su s odabranim natjecanjem; članstva u drugim natjecanjima ostaju nepromijenjena. |
 
----
+### UC-007: Pridruživanje timu
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Natjecatelj (A-02) |
+| **Povezani zahtjevi** | F-005, F-006 |
+| **Preduvjeti** | Natjecatelj je prijavljen i ne pripada timu u odabranom natjecanju; raspolaže pozivnicom ili kodom tima. |
+| **Glavni uspješni tok** | 1. Natjecatelj na stranici natjecanja odabire pridruživanje timu.<br>2. Unosi pristupni kod ili otvara pozivnicu.<br>3. Sustav provjerava valjanost pozivnice i pripadnost tima odabranom natjecanju.<br>4. Sustav provjerava da natjecatelj još nema članstvo u tom natjecanju.<br>5. Sustav evidentira članstvo i prikazuje podatke tima. |
+| **Alternativni tokovi / iznimke** | **3a — Neispravan kod ili tim ne pripada natjecanju:** Sustav odbija pridruživanje.<br>**4a — Postojeće članstvo:** Sustav ne stvara novo članstvo te upućuje korisnika na njegov tim.<br>**5a — Upis članstva nije uspio:** Korisnik ostaje izvan tima. |
+| **Posljedice (ishod)** | Natjecatelj postaje član jednog tima u odabranom natjecanju, bez utjecaja na ostala natjecanja. |
+
+### UC-008: Pregled zadataka i pristup njihovim resursima
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Natjecatelj (A-02) |
+| **Povezani zahtjevi** | F-009, F-010, F-019, F-020 |
+| **Preduvjeti** | Natjecatelj ima pravo pristupa natjecanju; odabrani zadatak objavljen je prema rasporedu. |
+| **Glavni uspješni tok** | 1. Natjecatelj otvara natjecanje i popis dostupnih zadataka.<br>2. Sustav prikazuje objavljene zadatke s naslovom, kategorijom i bodovima.<br>3. Natjecatelj odabire zadatak.<br>4. Sustav prikazuje opis, omogućuje preuzimanje javnih priloga iz `public/` i, ako zadatak koristi servise, prikazuje dodijeljene HTTP(S) ili TCP adrese.<br>5. Natjecatelj pristupa prilozima odnosno servisu radi rješavanja zadatka. |
+| **Alternativni tokovi / iznimke** | **2a — Zadatak nije objavljen:** Sustav ga ne prikazuje natjecatelju niti otkriva njegove privatne datoteke.<br>**4a — Zadatak nema javnih priloga ili servisa:** Sustav prikazuje samo raspoložive resurse.<br>**4b — Servis nije dostupan:** Sustav prikazuje stanje ili pogrešku, a statički zadaci i njihovi prilozi ostaju dostupni.<br>**4c — Nedopušten pristup prilozima:** Sustav odbija preuzimanje. |
+| **Posljedice (ishod)** | Natjecatelj dobiva pristup dopuštenom sadržaju i krajnjim točkama objavljenog zadatka; izvori iz `deploy/` i zastavica ostaju skriveni. |
+
+### UC-009: Predaja zastavice
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Natjecatelj (A-02), u ime tima |
+| **Povezani zahtjevi** | F-011, F-012, F-013 |
+| **Preduvjeti** | Natjecatelj je prijavljen, pripada timu odabranog natjecanja i zadatak je dostupan za rješavanje. |
+| **Glavni uspješni tok** | 1. Natjecatelj na stranici zadatka unosi pronađenu zastavicu.<br>2. Sustav provjerava ovlasti, vrijeme natjecanja i dostupnost zadatka.<br>3. Sustav uspoređuje predanu zastavicu s očekivanom vrijednošću i provjerava postoji li već rješenje toga tima.<br>4. Za prvu točnu predaju sustav bilježi rješenje i određuje bodove prema statičkom ili dinamičkom načinu bodovanja.<br>5. Sustav prikazuje rezultat predaje; odgovarajući bodovi odražavaju se na ljestvici. |
+| **Alternativni tokovi / iznimke** | **2a — Nema valjanog članstva ili zadatak nije dostupan:** Sustav odbija predaju.<br>**3a — Netočna zastavica:** Sustav prikazuje neuspješnu provjeru, bez evidentiranja rješenja.<br>**3b — Tim je već riješio zadatak:** Sustav prijavljuje ponovljenu predaju i ne dodjeljuje dodatne bodove.<br>**4a — Istodobne točne predaje:** Sustav evidentira najviše jedno rješenje po timu i zadatku. |
+| **Posljedice (ishod)** | Prva točna predaja evidentira se kao rješenje tima; bodovanje ostaje dosljedno i ne duplicira se. |
+
+### UC-010: Pregled ljestvice rezultata
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Posjetitelj (A-01) ili natjecatelj (A-02) |
+| **Povezani zahtjevi** | F-014 |
+| **Preduvjeti** | Natjecanje postoji i njegova je ljestvica javno dostupna. |
+| **Glavni uspješni tok** | 1. Korisnik otvara javnu stranicu natjecanja i odabire ljestvicu.<br>2. Sustav dohvaća evidentirana rješenja i važeće vrijednosti zadataka.<br>3. Sustav prikazuje timove poredane po ukupnim bodovima.<br>4. Korisnik pregledava poredak i rezultate timova. |
+| **Alternativni tokovi / iznimke** | **3a — Nema rješenja:** Sustav prikazuje praznu ljestvicu ili timove bez osvojenih bodova.<br>**2a — Dohvat nije uspio:** Sustav prikazuje pogrešku i omogućuje ponovni pokušaj. |
+| **Posljedice (ishod)** | Korisnik vidi poredak timova temeljen na evidentiranim rješenjima i odabranom modelu bodovanja. |
+
+### UC-011: Pregled profila i povijesti sudjelovanja
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Natjecatelj (A-02) |
+| **Povezani zahtjevi** | F-015 |
+| **Preduvjeti** | Korisnik je prijavljen. |
+| **Glavni uspješni tok** | 1. Korisnik otvara svoj profil.<br>2. Sustav prikazuje podatke računa i popis natjecanja u kojima korisnik sudjeluje ili je sudjelovao.<br>3. Korisnik odabire natjecanje iz svoje povijesti.<br>4. Sustav prikazuje pripadajući tim, evidentirana rješenja i osvojene bodove. |
+| **Alternativni tokovi / iznimke** | **2a — Korisnik još nije sudjelovao:** Sustav prikazuje praznu povijest.<br>**4a — Tražen je pristup tuđim privatnim podacima:** Sustav odbija zahtjev.<br>**2b — Dohvat nije uspio:** Sustav prikazuje pogrešku. |
+| **Posljedice (ishod)** | Korisnik dobiva uvid u vlastito sudjelovanje bez otkrivanja tuđih privatnih podataka. |
+
+### UC-012: Stvaranje i uređivanje zadataka
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Organizator (A-03); sekundarni akter: Discord (A-06) pri slanju obavijesti |
+| **Povezani zahtjevi** | F-007, F-010, F-012, F-013 |
+| **Preduvjeti** | Organizator je prijavljen i ima ovlasti nad odabranim natjecanjem. |
+| **Glavni uspješni tok** | 1. Organizator otvara zadatke vlastitog natjecanja te odabire novi ili postojeći zadatak.<br>2. Sustav prikazuje polja za naslov, opis, kategoriju, očekivanu zastavicu, način i parametre bodovanja te vrijeme objave.<br>3. Organizator unosi ili mijenja podatke i potvrđuje spremanje.<br>4. Sustav provjerava podatke i organizatorove ovlasti te pohranjuje zadatak.<br>5. Kada nastupi vrijeme objave, sustav omogućuje natjecateljima pristup zadatku, pokreće njegove potrebne servise i šalje konfiguriranu Discord obavijest. |
+| **Alternativni tokovi / iznimke** | **4a — Nevaljani parametri, zastavica ili vrijeme:** Sustav prikazuje pogrešku i ne pohranjuje nevaljanu promjenu.<br>**4b — Organizator nema ovlasti:** Sustav odbija radnju.<br>**5a — Izgradnja ili pokretanje servisa nije uspjelo:** Sustav evidentira pogrešku; funkcionalnosti statičkih zadataka ostaju dostupne.<br>**5b — Dostava Discord obavijesti nije uspjela:** Sustav bilježi pogrešku bez prekidanja objave ili bodovanja. |
+| **Posljedice (ishod)** | Zadatak je povezan s natjecanjem i ima definirane uvjete objave i bodovanja. Očekivana zastavica nije dostupna natjecateljskom sučelju. |
+
+### UC-013: Učitavanje ZIP paketa zadatka
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Organizator (A-03) |
+| **Povezani zahtjevi** | F-008 |
+| **Preduvjeti** | Organizator je prijavljen, ima ovlasti nad natjecanjem i raspolaže ZIP paketom zadatka. |
+| **Glavni uspješni tok** | 1. Organizator otvara zadatak i odabire učitavanje ili zamjenu ZIP paketa.<br>2. Odabire arhivu koja sadrži `config.yaml`, `public/` i `deploy/`.<br>3. Sustav provjerava strukturu arhive, valjanost konfiguracije i dopuštenost datoteka.<br>4. Sustav pohranjuje javne priloge odvojeno od datoteka potrebnih za izvođenje servisa.<br>5. Sustav povezuje paket sa zadatkom i potvrđuje uspješno učitavanje. |
+| **Alternativni tokovi / iznimke** | **3a — Nevaljana arhiva ili konfiguracija:** Sustav odbija paket i prikazuje razlog.<br>**3b — Nesigurne putanje ili nedopušten sadržaj:** Sustav odbija paket bez izdvajanja datoteka izvan dopuštenog prostora.<br>**4a — Pohrana nije uspjela:** Sustav prijavljuje pogrešku i ne potvrđuje uspješno učitavanje.<br>**5a — Zamjena paketa:** Novi valjani paket zamjenjuje pripadajuće datoteke zadatka, bez nenamjerne objave izvora servisa. |
+| **Posljedice (ishod)** | Zadatak ima pohranjen valjan paket; sadržaj `public/` može biti javno dostupan prema pravilima objave, a `deploy/` služi izgradnji servisa. |
+
+### UC-014: Pregled statistike natjecanja
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Organizator (A-03) |
+| **Povezani zahtjevi** | F-015 |
+| **Preduvjeti** | Organizator je prijavljen i ima ovlasti nad odabranim natjecanjem. |
+| **Glavni uspješni tok** | 1. Organizator otvara pregled vlastitog natjecanja.<br>2. Odabire statistiku natjecanja.<br>3. Sustav prikazuje broj prijavljenih timova, rješenja zadataka, ukupne rezultate i druge osnovne pokazatelje.<br>4. Organizator pregledava rezultate i uspješnost pojedinih zadataka. |
+| **Alternativni tokovi / iznimke** | **3a — Nema sudionika ili rješenja:** Sustav prikazuje nulte vrijednosti i razumljivu poruku.<br>**3b — Organizator nema pristup natjecanju:** Sustav odbija zahtjev.<br>**3c — Dohvat nije uspio:** Sustav prikazuje pogrešku. |
+| **Posljedice (ishod)** | Organizator dobiva sažet uvid u tijek i rezultate natjecanja, bez izmjene natjecateljskih podataka. |
+
+### UC-015: Nadzor i upravljanje servisima zadataka
+
+| Element specifikacije | Opis |
+| :--- | :--- |
+| **Primarni akter** | Administrator (A-04) |
+| **Povezani zahtjevi** | F-022 |
+| **Preduvjeti** | Administrator je prijavljen; postoji evidentiran servis ili pokušaj njegova pokretanja. |
+| **Glavni uspješni tok** | 1. Administrator otvara pregled servisa zadataka.<br>2. Sustav prikazuje natjecanje, zadatak, stanje servisa, njegove krajnje točke i raspoložive informacije o pogreškama.<br>3. Administrator odabire servis koji zahtijeva intervenciju.<br>4. Administrator zatraži ponovno pokretanje.<br>5. Sustav provjerava ovlasti, prosljeđuje zahtjev Runneru, bilježi radnju i prikazuje novi status. |
+| **Alternativni tokovi / iznimke** | **2a — Nema aktivnih servisa:** Sustav prikazuje prazan pregled.<br>**4a — Administrator odustaje:** Nijedna radnja nije pokrenuta.<br>**5a — Runner nije dostupan ili restart nije uspio:** Sustav evidentira neuspjeh i prikazuje pogrešku bez netočnog prikaza uspjeha.<br>**5b — Nedostatne ovlasti:** Sustav odbija radnju. |
+| **Posljedice (ishod)** | Administrator ima pregled stanja i zabilježenu intervenciju; sustav održava evidenciju promjene stanja servisa. |
 
 ## 3.3 Provjera dosljednosti obrazaca uporabe
 
-**Cilj:** Provjeriti međusobnu usklađenost obrazaca uporabe, aktera, zahtjeva i ispitnih slučajeva. Cjelovito mapiranje održava se isključivo u **[matrici sljedivosti zahtjeva](2-Analiza-zahtjeva.md#26-sljedivost-zahtjeva)**.
+Dijagram u odjeljku 3.1 i specifikacije u odjeljku 3.2 obuhvaćaju istih 15 obrazaca uporabe. Potpuno mapiranje zahtjeva na obrasce uporabe ili automatsko ponašanje sustava nalazi se u [odjeljku 2.6](./2-Analiza-zahtjeva.md#26-sljedivost-zahtjeva).
 
-| Provjera | Pitanje za tim |
-| --- | --- |
-| Zahtjev | Je li svaki važan obrazac uporabe povezan s postojećim zahtjevom? |
-| Akter | Odgovara li akter naveden ovdje prethodno utvrđenoj ulozi i dopuštenoj interakciji? |
-| Aplikacija | Može li tim demonstrirati opisani glavni rezultat i važnu alternativu ili je opis jasno označen kao trenutačno oblikovanje? |
-
----
-
-Povezivanje zahtjev → obrazac uporabe → ispitivanje održavajte **samo jednom, u [tablici sljedivosti zahtjeva](./2-Analiza-zahtjeva.md)**. Ovdje nemojte održavati drugu projektnu tablicu mapiranja ni stupac sa statusom implementacije. Ako važan zahtjev nema interakciju s ljudskim akterom, objasnite gdje se obrađuje umjesto izmišljanja aktera.
-
-<details>
-<summary><strong>Provjera pokrivenosti zahtjeva</strong></summary>
-
-**Primjer — CrisisMap:** Tablica pokrivenosti obrazaca uporabe koju treba analizirati:
-
-| Broj obrasca uporabe | Naziv obrasca uporabe | Obuhvaćeni funkcijski zahtjevi |
-| --- | --- | --- |
-| UC-001 | Registracija računa | F-001: Registracija računa putem e-pošte |
-| UC-002 | Prijava kriznog događaja | F-022: Prijava i provjera kriznog događaja |
-| UC-003 | Sustav upozorenja | F-045: Slanje upozorenja korisnicima i timovima |
-| UC-004 | Koordinacija spašavanja | F-067: Koordinacija s hitnim službama |
-
----
-
-**Problemi pokrivenosti koje treba riješiti:**
-
-- **Pogrešan ID zahtjeva:** ova tablica povezuje UC-002 s F-022, dok se opis UC-002 u odjeljku 3.2 poziva na F-004, zahtjev za podnošenje prijave iz odjeljka 2.1.
-- **Zahtjevi koji ne postoje:** F-022, F-045 i F-067 nisu definirani u oglednim zahtjevima u 2.1.
-- **Obrasci uporabe bez opisa:** UC-003 i UC-004 nemaju opis u 3.2. UC-004 (koordinacija s hitnim službama) ujedno je mogućnost s vanjskim posljedicama koju opseg dopušta samo ako je uključena u odobreni zadatak.
-- **Nesklad aktera:** primjer aktera u odjeljku 2.3 navodi da koordinator pomoći podnosi prijave (F-004), dok UC-002 kao primarnog aktera navodi građanina.
-
-</details>
-
-**Završna provjera:** Dijagram, specifikacije obrazaca uporabe i matrica sljedivosti međusobno su usklađeni. Svaki važan obrazac uporabe povezan je s postojećim zahtjevom, akteri odgovaraju stvarnim ulogama u aplikaciji, a opisani glavni i alternativni tijekovi odgovaraju ponašanju koje sustav stvarno podržava.
+Zahtjevi koji nisu samostalni korisnički ciljevi obuhvaćeni su pripadajućim tijekovima i ponašanjem sustava: Discord obavijesti (F-016), izgradnja i objava servisa (F-017 i F-018), mrežna dostupnost i komunikacija servisa (F-019 – F-021), uklanjanje servisa po završetku natjecanja (F-023) te neovisnost statičkih zadataka o Runneru (F-024). Challenge Runner zato nije dodatni akter dijagrama.

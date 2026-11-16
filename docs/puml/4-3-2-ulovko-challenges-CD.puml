@@ -1,0 +1,133 @@
+@startuml
+' UML dijagram razreda: upravljanje zadacima i objava servisa.
+' Zadrzane su odabrane javne operacije i NestJS stereotipi.
+
+top to bottom direction
+
+' Diskretne boje i pregledniji raspored, prikladan za dokumentaciju.
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 13
+skinparam ArrowColor #71849C
+skinparam ArrowThickness 1.2
+skinparam nodesep 42
+skinparam ranksep 58
+skinparam packageStyle rectangle
+skinparam package {
+  BackgroundColor #FCFDFE
+  BorderColor #CED8E6
+  FontColor #33455D
+  FontSize 14
+}
+skinparam class {
+  BackgroundColor #F7FAFE
+  HeaderBackgroundColor #ECF1F8
+  BorderColor #A4B4CC
+  FontColor #1E2D44
+  AttributeFontColor #263750
+  StereotypeFontColor #536782
+
+  BackgroundColor<<controller>> #EAF2FF
+  BorderColor<<controller>> #86A9D6
+  BackgroundColor<<service>> #EDF7F5
+  BorderColor<<service>> #8BB9B0
+  BackgroundColor<<guard>> #FFF4E8
+  BorderColor<<guard>> #D5AE84
+  BackgroundColor<<client>> #F1EEFB
+  BorderColor<<client>> #AB9BD1
+}
+skinparam stereotypeCBackgroundColor<<controller>> #8EB2E0
+skinparam stereotypeCBackgroundColor<<service>> #84B8AD
+skinparam stereotypeCBackgroundColor<<guard>> #D6AB7B
+skinparam stereotypeCBackgroundColor<<client>> #A99BD3
+skinparam interface {
+  BackgroundColor #F2F5FC
+  BorderColor #A4B4CC
+  FontColor #1E2D44
+}
+hide empty members
+
+package "NestJS API" {
+  ' Ulazne tocke i autorizacija.
+  together {
+    class CompetitionsController <<controller>> {
+      + createCompetition(body, request)
+      + uploadChallenge(competitionId, file, body)
+      + updateChallenge(competitionId, challengeId, file, body)
+      + deployChallenge(competitionId, challengeId)
+    }
+    class CompetitionOwnerGuard <<guard>> {
+      + canActivate(context): Promise<boolean>
+    }
+  }
+
+  ' Sredisnja poslovna logika.
+  together {
+    class CompetitionsService <<service>> {
+      + createCompetition(body, organizerId)
+      + listChallenges(competitionId)
+      + uploadChallenge(competitionId, file, body)
+      + updateChallenge(competitionId, challengeId, file, body)
+      + downloadHandout(compId, taskId, user)
+    }
+    class ChallengeDeploymentsService <<service>> {
+      + start(competitionId, challengeId)
+      + status(competitionId, challengeId)
+      + publishedEndpoints(competitionId, challengeId)
+    }
+  }
+
+  ' Obrada i pohrana datoteka.
+  together {
+    class ArchiveService <<service>> {
+      + prepare(uploadPath): Promise<PreparedPackage>
+    }
+    class R2Service <<service>> {
+      + upload(competitionId, taskId, pkg)
+      + replacePackage(competitionId, taskId, pkg, previous, commit)
+      + readHandout(competitionId, challengeId)
+    }
+    interface PreparedPackage {
+      + configPath?: string
+      + publicZip?: string
+      + deployZip?: string
+      + hasPublic: boolean
+      + hasDeploy: boolean
+      + cleanup(): Promise<void>
+    }
+  }
+
+  ' Baza podataka i vanjski Runner.
+  together {
+    class DatabaseService <<service>> {
+      + db: NodePgDatabase
+    }
+    class RunnerClient <<client>> {
+      + queue(competitionId, challengeId)
+      + build(buildId)
+      + deploy(competitionId, challengeId, buildId)
+      + challenge(competitionId, challengeId)
+    }
+  }
+}
+
+' Puna strelica oznacava usmjerenu asocijaciju (injektiranu ovisnost),
+' isprekidana strelica ovisnost o tipu ili deklaraciji.
+CompetitionsController --> CompetitionsService
+CompetitionsController --> ChallengeDeploymentsService
+CompetitionsController ..> CompetitionOwnerGuard
+
+CompetitionOwnerGuard --> DatabaseService
+CompetitionsService --> DatabaseService
+CompetitionsService --> ArchiveService
+CompetitionsService --> R2Service
+
+ArchiveService ..> PreparedPackage
+R2Service ..> PreparedPackage
+
+ChallengeDeploymentsService --> DatabaseService
+ChallengeDeploymentsService --> RunnerClient
+
+@enduml

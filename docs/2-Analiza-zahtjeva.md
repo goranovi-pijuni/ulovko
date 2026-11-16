@@ -82,20 +82,34 @@ Značajne promjene bilježit će se nakon što tim usvoji početni opseg. Trenut
 
 ## 2.6 Sljedivost zahtjeva
 
-Sljedeća je tablica početna veza zahtjeva s planiranim modulima. Oznake obrazaca uporabe i ispita dodat će se tek nakon što stvarni dokumenti i testovi budu napisani, nije korisno unaprijed izmišljati njihove identifikatore.
+Tablica povezuje funkcijske zahtjeve s [obrascima uporabe](./3-Obrasci-uporabe.md) ili automatskim ponašanjem koje se odvija tijekom njihovih tijekova. Tehnički zahtjevi koji ne predstavljaju samostalni cilj korisnika nisu izdvojeni u umjetne obrasce uporabe. Ispitivanja su opisana kao načini provjere, bez zasebnog izmišljanja identifikatora ispitnih slučajeva.
 
-| ID zahtjeva | Obrazac uporabe / ponašanje | Arhitekturna realizacija (planirana) | Ispitivanje ili provjera |
+| ID zahtjeva | Obrazac uporabe / ponašanje | Arhitekturna realizacija | Ispitivanje ili provjera |
 | --- | --- | --- | --- |
-| F-001 | Prijava korisnika, detaljni UC na čekanju | Backend autentikacija, vanjski IdP | Integracijski test prijave (na čekanju) |
-| F-002 | Zahtjev i odobravanje organizatorskog statusa, UC na čekanju | Backend ovlasti, administracijsko sučelje | Test dopuštenih i zabranjenih radnji (na čekanju) |
-| F-005 | Izrada tima i pridruživanje, UC na čekanju | Backend timovi, baza podataka | Test ograničenja jednog članstva (na čekanju) |
-| F-008 | Učitavanje paketa zadatka, UC na čekanju | Backend zadaci, objektna pohrana, parser | Test valjanih/nevaljanih ZIP arhiva (na čekanju) |
-| F-011, F-012, F-013 | Predaja zastavice i bodovanje, UC na čekanju | Backend scoring, baza podataka | Test bodovanja i istodobnih predaja (na čekanju) |
-| F-016 | Discord obavijesti | Backend događaji, Discord webhook | Integracijski test slanja i pogreške dostave (na čekanju) |
-| F-017, F-018 | Izgradnja i objava zadatka | Runner API, build proces, orkestracija | End-to-end test izgradnje i pokretanja (na čekanju) |
-| F-019, F-020, F-021 | Pristup HTTP/TCP servisima i interna komunikacija | Runner, mrežne usluge, ingress/portovi | Mrežni integracijski test (na čekanju) |
-| F-022, F-023 | Nadzor i zaustavljanje servisa | Runner API, administracijsko sučelje | Test restarta i uklanjanja resursa (na čekanju) |
-| F-024 | Natjecanje bez Runnera | Backend natjecanja i bodovanje | Test s nedostupnim Runnerom (na čekanju) |
+| F-001 | UC-002 — Prijava u sustav | Autentikacija, sesija, vanjski pružatelj identiteta | Uspješna i neuspješna prijava te odjava |
+| F-002 | UC-003 — Podnošenje zahtjeva, UC-004 — Obrada zahtjeva | Korisničke ovlasti i zahtjevi za organizatorski status | Odobravanje, odbijanje i zabrana pristupa bez ovlasti |
+| F-003 | UC-001 — Pregled natjecanja | Javni API natjecanja i prikaz detalja | Prikaz nadolazećih, aktivnih i završenih natjecanja |
+| F-004 | UC-005 — Stvaranje i uređivanje natjecanja | Upravljanje natjecanjima i provjera vlasništva | Valjana/nevaljana promjena te pokušaj uređivanja tuđeg natjecanja |
+| F-005 | UC-006 — Osnivanje tima, UC-007 — Pridruživanje timu | Timovi i pristupni kodovi | Izrada tima, valjan/nevaljan pozivni kod |
+| F-006 | UC-006, UC-007, UC-011 — Povijest sudjelovanja | Članstva korisnika po natjecanju | Jedan tim po natjecanju i neovisna članstva u drugim natjecanjima |
+| F-007 | UC-012 — Stvaranje i uređivanje zadataka | Zadaci, kategorije, zastavice i bodovanje | Valjanost metapodataka i nedostupnost zastavice javnom API-ju |
+| F-008 | UC-013 — Učitavanje ZIP paketa | Pohrana paketa, obrada konfiguracije i datoteka | Valjana i nevaljana struktura ZIP arhive |
+| F-009 | UC-008 — Pregled zadataka i pristup resursima | Izdavanje javnih priloga | Preuzimanje `public/` bez izlaganja `deploy/` |
+| F-010 | UC-012 — Postavke objave, UC-008 — Pregled objavljenih zadataka | Raspored objave i provjera dostupnosti | Zadatak prije i nakon vremena objave |
+| F-011 | UC-009 — Predaja zastavice | Provjera zastavice i evidencija rješenja | Točna, netočna i ponovljena predaja |
+| F-012 | UC-012 — Postavke bodovanja, UC-009 — Predaja, UC-010 — Ljestvica | Statičko bodovanje | Dodjela zadanog broja bodova nakon prvog rješenja |
+| F-013 | UC-012 — Postavke bodovanja, UC-009 — Predaja, UC-010 — Ljestvica | Dinamičko bodovanje | Preračun bodova nakon novih rješenja |
+| F-014 | UC-010 — Pregled ljestvice | Izračun rezultata i sortiranje timova | Poredak nakon više uspješnih predaja |
+| F-015 | UC-011 — Profil i povijest, UC-014 — Statistika natjecanja | Pregledi sudjelovanja, rješenja i rezultata | Povijest korisnika i statistika organizatora |
+| F-016 | Obavijesti o objavi zadatka u okviru UC-012 | Događaji i Discord web-dojavnik | Dostava obavijesti i obrada pogreške dostave |
+| F-017 | Izgradnja servisa iz paketa UC-013 pri pripremi objave iz UC-012 | Challenge Runner, izgradnja kontejnerskih slika | Izgradnja paketa s više servisa i prijava pogreške |
+| F-018 | Automatsko pokretanje servisa pri objavi iz UC-012 | Challenge Runner, orkestracija instanci | Jedna zajednička instanca po zadatku i natjecanju |
+| F-019 | UC-008 — Pristup HTTP servisu objavljenog zadatka | Runner, HTTP usmjeravanje i TLS | Ispravna HTTPS adresa javnog servisa |
+| F-020 | UC-008 — Pristup TCP servisu objavljenog zadatka | Runner, dodjela TCP portova | Dostupan i nekonfliktan TCP port |
+| F-021 | Interna komunikacija servisa pokrenutih u okviru UC-012 | Privatna mreža i imena servisa unutar zadatka | Povezivanje dvaju servisa privatnom adresom |
+| F-022 | UC-015 — Nadzor i upravljanje servisima | Administratorski pregled i Runner API | Pregled statusa, restart i nedostatne ovlasti |
+| F-023 | Automatsko uklanjanje servisa po završetku natjecanja iz UC-005 | Životni ciklus natjecanja i Runner | Zaustavljanje servisa i oslobađanje portova |
+| F-024 | UC-008, UC-009 i UC-010 za statičke zadatke bez Runnera | Backend natjecanja, predaja i bodovanje | Dostupnost statičkog zadatka, predaje i ljestvice uz nedostupan Runner |
 
 ## 2.7 Pregled zahtjeva
 

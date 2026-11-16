@@ -1,0 +1,137 @@
+@startuml
+' Ulovko — relacijski model podataka (db/schema.ts)
+' Puni atributi, bez suvisnih oznaka na vezama.
+
+top to bottom direction
+hide circle
+
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam linetype ortho
+skinparam defaultFontName "DejaVu Sans"
+skinparam defaultFontSize 12
+skinparam ArrowColor #64748B
+skinparam ArrowThickness 1
+skinparam nodesep 38
+skinparam ranksep 50
+skinparam entity {
+  BackgroundColor #F8FAFC
+  BorderColor #94A3B8
+  FontColor #1E293B
+  FontSize 12
+}
+
+entity "Users" as Users #EDF4FF {
+  * id : serial <<PK>>
+  --
+  * email : text <<UNIQUE>>
+  * oauthUserId : text <<UNIQUE>>
+  * displayName : text
+  avatar : bytea
+  * permLevel : integer
+  * creationTime : timestamp
+  * lastEditTime : timestamp
+}
+
+entity "PermissionRequests" as PermissionRequests {
+  * id : serial <<PK>>
+  --
+  * requestedBy : integer <<FK>>
+  * requestTime : timestamp
+  verdictTime : timestamp
+  * result : boolean
+}
+
+entity "Teams" as Teams {
+  * id : serial <<PK>>
+  --
+  * name : text
+  * accessCode : text
+  * captain : integer <<FK>>
+  * foundingTime : timestamp
+}
+
+entity "Competitions" as Competitions #EDF4FF {
+  * id : serial <<PK>>
+  --
+  * compName : text
+  compDescription : text
+  * compStart : timestamp
+  * compEnd : timestamp
+  * organizedBy : integer <<FK>>
+  min : integer
+  max : integer
+  decay : integer
+}
+
+entity "UserTeamComp" as UserTeamComp {
+  * userId : integer <<PK, FK>>
+  * teamId : integer <<PK, FK>>
+  * compId : integer <<PK, FK>>
+  --
+  * participationStartTime : integer
+  participationEndTime : integer
+}
+
+entity "Solutions" as Solutions {
+  * userId : integer <<PK, FK>>
+  * compId : integer <<PK, FK>>
+  * challengeId : integer <<PK, FK>>
+  --
+  * solveTime : timestamp
+}
+
+entity "Categories" as Categories {
+  * id : serial <<PK>>
+  --
+  * categoryName : text
+}
+
+entity "Challenges" as Challenges #EAF7F5 {
+  * id : serial <<PK>>
+  --
+  * competitionId : integer <<FK>>
+  * categoryId : integer <<FK>>
+  deployId : integer <<FK, UNIQUE>>
+  * challengeTitle : text
+  challengeDescription : text
+  * publishingDate : timestamp
+  * isPublic : boolean
+  * flag : text
+  points : integer
+  * hasHandout : boolean
+  * hasDeploy : boolean
+}
+
+entity "Deployments" as Deployments {
+  * id : serial <<PK>>
+  --
+  * status : status
+  buildId : text
+  latestError : text
+}
+
+' Crow's-foot veze: kardinalnosti su dovoljne; nazivi FK-a su u tablicama.
+Users ||--o{ PermissionRequests
+Users ||--o{ Teams
+Users ||--o{ Competitions
+
+Users ||--o{ UserTeamComp
+Teams ||--o{ UserTeamComp
+Competitions ||--o{ UserTeamComp
+
+Competitions ||--o{ Challenges
+Categories ||--o{ Challenges
+Challenges |o--o| Deployments
+
+Users ||--o{ Solutions
+Competitions ||--o{ Solutions
+Challenges ||--o{ Solutions
+
+' Samo nenametljive smjernice za raspored (nisu dodatne veze).
+PermissionRequests -[hidden]right- Users
+Users -[hidden]right- Teams
+Competitions -[hidden]right- UserTeamComp
+Categories -[hidden]right- Challenges
+Challenges -[hidden]right- Deployments
+@enduml
