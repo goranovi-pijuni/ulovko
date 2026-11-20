@@ -1,0 +1,89 @@
+name: Generate documentation PDFs (PR)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: documentation-pdfs-main
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out main (PR base)
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install document tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            pandoc graphviz fonts-dejavu-core \
+            libpango-1.0-0 libpangocairo-1.0-0
+          python -m pip install --disable-pip-version-check \
+            weasyprint==68.0 beautifulsoup4==4.14.2
+
+      - name: Render PlantUML diagrams
+        shell: bash
+        env:
+          PLANTUML_VERSION: '1.2025.4'
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/plantuml.jar" \
+            "https://github.com/plantuml/plantuml/releases/download/v${PLANTUML_VERSION}/plantuml-${PLANTUML_VERSION}.jar"
+
+          source_dir="docs/puml"
+          output_dir="docs/assets/diagrams/plantuml"
+          mkdir -p "$output_dir"
+          while IFS= read -r -d '' source; do
+            relative="${source#${source_dir}/}"
+            destination="$GITHUB_WORKSPACE/$output_dir/$(dirname "$relative")"
+            mkdir -p "$destination"
+            java -jar "$RUNNER_TEMP/plantuml.jar" \
+              -charset UTF-8 -tsvg -failonerror -o "$destination" "$source"
+          done < <(find "$source_dir" -type f -name '*.puml' -print0)
+
+      - name: Convert Markdown to PDF
+        run: python scripts/build-doc-pdfs.py --docs-dir docs
+
+      - name: Create or update documentation PR
+        id: pr
+        uses: peter-evans/create-pull-request@v8
+        with:
+          base: main
+          branch: automation/documentation-pdfs
+          delete-branch: true
+          add-paths: docs/deliverables/*.pdf
+          commit-message: 'docs: regenerate PDF deliverables'
+          title: 'docs: ažurirane PDF inačice dokumentacije'
+          body: |
+            Automatski generirani PDF dokumenti iz `docs/*.md`.
+
+            PlantUML dijagrami regenerirani su prije izvoza. Izvorni Markdown
+            i dijagrami ostaju mjerodavni; ovaj PR sadrži PDF inačice.
+
+      - name: Show pull request
+        if: steps.pr.outputs.pull-request-url != ''
+        env:
+          PR_URL: ${{ steps.pr.outputs.pull-request-url }}
+        run: |
+          echo "PDF PR: $PR_URL" >> "$GITHUB_STEP_SUMMARY"
